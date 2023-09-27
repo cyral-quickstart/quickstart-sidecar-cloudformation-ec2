@@ -103,3 +103,9 @@ instances to the protected databases.
 ### Parameters
 
 See the full list of parameters in the [module's documentation page](https://github.com/cyralinc/sidecar-cloudformation-ec2).
+
+### Advanced
+
+Instructions for advanced deployment configurations are available for the following topics:
+
+* [Certificates for TLS connectivity](./docs/certificates.md)
