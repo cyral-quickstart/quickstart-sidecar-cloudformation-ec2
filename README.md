@@ -108,4 +108,4 @@ See the full list of parameters in the [module's documentation page](https://git
 
 Instructions for advanced deployment configurations are available for the following topics:
 
-* [Certificates for TLS connectivity](./docs/certificates.md)
+* [Sidecar certificates](./docs/certificates.md)
