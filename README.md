@@ -109,3 +109,4 @@ See the full list of parameters in the [module's documentation page](https://git
 Instructions for advanced deployment configurations are available for the following topics:
 
 * [Sidecar certificates](./docs/certificates.md)
+* [Sidecar instance metrics](./docs/metrics.md)
