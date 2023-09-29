@@ -36,7 +36,7 @@ The elements shown in the architecture diagram above are deployed by the [Cyral 
     * Create a new stack.
     * Upload the `.yaml` file created previously.
     * Click `Next`.
-    * Enter a suitable `Stack name`, then fill the parameters `SidecarId`, `ControlPlane`, `ClientID` and 
+    * Enter a suitable `Stack name`, then fill the parameters `SidecarId`, `ControlPlane`, `ClientId` and 
     `ClientSecret` with the information from the `Cyral Templates` option
     in the `Deployment` tab of your sidecar details.
     * Fill the parameters `VPC` and `Subnets` with an existing VPC and
@@ -70,7 +70,7 @@ instances to the protected databases.
     * Create a new stack.
     * Upload the `.yaml` file created previously.
     * Click `Next`.
-    * Enter a suitable `Stack name`, then fill the parameters `SidecarId`, `ControlPlane`, `ClientID` and 
+    * Enter a suitable `Stack name`, then fill the parameters `SidecarId`, `ControlPlane`, `ClientId` and 
     `ClientSecret` with the information from the `Cyral Templates` option
     in the `Deployment` tab of your sidecar details.
     * Fill the parameters `VPC` and `Subnets` with an existing VPC and
