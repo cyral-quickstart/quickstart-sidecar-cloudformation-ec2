@@ -31,10 +31,10 @@ The elements shown in the architecture diagram above are deployed by the [Cyral 
 
 #### Quickstart
 
-* Save the code below in a `.yaml` file (e.g. `sidecar.yaml`) in a new folder.
+* Download the deployment template in [cft_sidecar.yaml](./cft_sidecar.yaml).
 * Log in to AWS and open the [CloudFormation console](http://console.aws.amazon.com/cloudformation/home).
     * Create a new stack.
-    * Upload the `.yaml` file created previously.
+    * Upload the downloaded template.
     * Click `Next`.
     * Enter a suitable `Stack name`, then fill the parameters `SidecarId`, `ControlPlane`, `ClientId` and 
     `ClientSecret` with the information from the `Cyral Templates` option
@@ -42,13 +42,11 @@ The elements shown in the architecture diagram above are deployed by the [Cyral 
     * Fill the parameters `VPC` and `Subnets` with an existing VPC and
     subnet that can connect to the database you plan to protect with this
     sidecar.
+    * Set parameters `AssociatePublicIpAddress=true` and `LoadBalancerScheme='internal'`
+    to deploy a public sidecar.
     * Click `Next`, follow the remaining steps of the wizard acknowledging the capabilities requested and confirm the stack creation.
 
-```yaml
-
-```
-
-The quickstart example above will create the simplest configuration possible on your AWS account
+This quickstart will create the simplest configuration possible on your AWS account
 and deploy a single sidecar instance behind the load balancer. As this is just a quickstart
 to help you understand basic concepts, it deploys a public sidecar instance with an
 internet-facing load balancer.
@@ -65,10 +63,10 @@ instances to the protected databases.
 
 #### Production Starting Point
 
-* Save the code below in a `.yaml` file (e.g. `sidecar.yaml`) in a new folder.
+* Download the deployment template in [cft_sidecar.yaml](./cft_sidecar.yaml).
 * Log in to AWS and open the [CloudFormation console](http://console.aws.amazon.com/cloudformation/home).
     * Create a new stack.
-    * Upload the `.yaml` file created previously.
+    * Upload the downloaded template.
     * Click `Next`.
     * Enter a suitable `Stack name`, then fill the parameters `SidecarId`, `ControlPlane`, `ClientId` and 
     `ClientSecret` with the information from the `Cyral Templates` option
@@ -76,6 +74,8 @@ instances to the protected databases.
     * Fill the parameters `VPC` and `Subnets` with an existing VPC and
     subnet that can connect to the database you plan to protect with this
     sidecar.
+    * Set `AssociatePublicIpAddress=true`, `LoadBalancerScheme='internal'`, `AsgMin=1`, `AsgMax=4`, 
+    `AsgDesired=2`, and `EnableCrossZoneLoadBalancing=true`.
     * Click `Next`, follow the remaining steps of the wizard acknowledging the capabilities requested and confirm the stack creation.
 
 ```yaml
@@ -91,8 +91,7 @@ for your production workload.
 
 In order to properly secure your sidecar, define appropriate inbound CIDRs using variables
 `SSHInboundCIDR`, `DBInboundCIDR` and `MonitoringInboundCIDR`. See the
-variables documentation in the [module's documentation page](https://github.com/cyralinc/sidecar-cloudformation-ec2)
-for more information.
+variables documentation in the downloaded file for more information.
 
 In case the databases you are protecting with the Cyral sidecar also live on AWS, make sure to
 add the sidecar security group (see output parameter `SidecarSecurityGroupID`) to the list of
@@ -102,7 +101,13 @@ instances to the protected databases.
 
 ### Parameters
 
-See the full list of parameters in the [module's documentation page](https://github.com/cyralinc/sidecar-cloudformation-ec2).
+See the full list of parameters in the parameters section of the [deployment template](./cft_sidecar.yaml).
+
+### 1-click upgrade
+
+This quick start supports [1-click upgrade](https://cyral.com/docs/sidecars/manage/upgrade#1-click-upgrade).
+To enable the 1-click upgrade feature, leave the variable `SidecarVersion` empty. If you prefer
+to block this feature instead, assign the desired sidecar version to `SidecarVersion`.
 
 ### Advanced
 
