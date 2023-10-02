@@ -29,7 +29,7 @@ The elements shown in the architecture diagram above are deployed by the [Cyral 
 
 ### Examples
 
-#### Quickstart
+#### Quick Start
 
 * Download the deployment template in [cft_sidecar.yaml](./cft_sidecar.yaml).
 * Log in to AWS and open the [CloudFormation console](http://console.aws.amazon.com/cloudformation/home).
@@ -46,8 +46,8 @@ The elements shown in the architecture diagram above are deployed by the [Cyral 
     to deploy a public sidecar.
     * Click `Next`, follow the remaining steps of the wizard acknowledging the capabilities requested and confirm the stack creation.
 
-This quickstart will create the simplest configuration possible on your AWS account
-and deploy a single sidecar instance behind the load balancer. As this is just a quickstart
+This quick start will create the simplest configuration possible on your AWS account
+and deploy a single sidecar instance behind the load balancer. As this is just an example
 to help you understand basic concepts, it deploys a public sidecar instance with an
 internet-facing load balancer.
 
