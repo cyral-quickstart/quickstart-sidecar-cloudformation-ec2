@@ -103,11 +103,18 @@ instances to the protected databases.
 
 See the full list of parameters in the parameters section of the [deployment template](./cft_sidecar.yaml).
 
-### 1-click upgrade
+### Upgrade
 
 This quick start supports [1-click upgrade](https://cyral.com/docs/sidecars/manage/upgrade#1-click-upgrade).
-To enable the 1-click upgrade feature, leave the variable `SidecarVersion` empty. If you prefer
-to block this feature instead, assign the desired sidecar version to `SidecarVersion`.
+
+To enable the 1-click upgrade feature, leave the variable `SidecarVersion` empty and upgrade
+the sidecar from Cyral control plane.
+
+If you prefer to block upgrades from the Cyral control plane and use a **static version**, assign
+the desired sidecar version to `SidecarVersion`. To upgrade your sidecar, update this parameter
+with the target version and upgrade the CloudFormation stack.
+
+Learn more in the [sidecar upgrade procedures](https://cyral.com/docs/sidecars/manage/upgrade) page.
 
 ### Advanced
 
