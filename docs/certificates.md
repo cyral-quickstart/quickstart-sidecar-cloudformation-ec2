@@ -48,7 +48,7 @@ module. Suppose you have the following configuration:
 1. Provide the ARN of `role1` to `SidecarTLSCertificateRoleArn` (for the TLS
    certificate) or `SidecarCACertificateRoleArn` (for the CA certificate) of
    the sidecar module. If you created role `role2`, provide the ARN of `role2`
-   to the parameter `sidecar_custom_host_role`.
+   to the parameter `SidecarCustomHostRole`.
 
 1. Provide the ARNs of the certificate secrets to the sidecar module, as
    instructed in the next section.
