@@ -28,16 +28,15 @@ Metadata:
       - SidecarDNSName
       - LoadBalancerScheme
       - AssociatePublicIpAddress
-    - Label:
-        default: 'High Availability'
-      Parameters:
-      - InstanceCount
-    - Label:
-        default: 'Backwards Compatibility - Only needed for versions prior to 4.10'
-      Parameters:
       - ContainerRegistry
       - ContainerRegistryUsername
       - ContainerRegistryKey
+    - Label:
+        default: 'High Availability'
+      Parameters:
+      - AsgMin
+      - AsgMax
+      - AsgDesired
 
 Parameters:
   AssociatePublicIpAddress :
@@ -135,10 +134,22 @@ Parameters:
       In order to define a new image, replace 'recommended' by the desired image name (eg 'amzn2-ami-ecs-hvm-2.0.20181112-x86_64-ebs')."
     Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64'
 
-  InstanceCount:
+  AsgMin:
+    Description: "The minimum number of hosts to create in the auto autoscaling group"
+    Type: "String"
+    Default: "1"
+    AllowedPattern: "[0-9]+"
+
+  AsgDesired:
     Description: "The desired number of hosts to create in the auto scaling group"
     Type: "String"
     Default: "1"
+    AllowedPattern: "[0-9]+"
+
+  AsgMax:
+    Description: "The maximum number of hosts to create in the auto scaling group"
+    Type: "String"
+    Default: "2"
     AllowedPattern: "[0-9]+"
 
   CustomTag:
@@ -193,10 +204,10 @@ Resources:
         LaunchTemplateId: !Ref SidecarLaunchTemplate
         Version: !GetAtt SidecarLaunchTemplate.LatestVersionNumber
       VPCZoneIdentifier: !Ref Subnets
-      MinSize: 1
-      MaxSize: 5
+      MinSize: !Ref AsgMin
+      MaxSize: !Ref AsgMax
       Cooldown: "0"
-      DesiredCapacity: !Ref InstanceCount
+      DesiredCapacity: !Ref AsgDesired
       HealthCheckType: EC2
       HealthCheckGracePeriod: 600
       TargetGroupARNs:
@@ -698,8 +709,20 @@ Resources:
                 docker_compose_install
                 update_nginx_resolver
                 echo "Checking for current certs"
-                # Add a grep for the sidecar stuffs in the .env file
-                if [ -z $SIDECAR_TLS_KEY ]
+                # Check if a .env file exists already
+                if ! test -f /home/ec2-user/.env; then
+                  GENERATE_TLS="yes"
+                else
+                  # Test to see if the env file contains a Certificate
+                  TEST_FOR_TLS_KEY=`grep '^CYRAL_CERTIFICATE_MANAGER_TLS_KEY=[A-Za-z0-9\/\+]$'  /home/ec2-user/.env`
+                  if [ -z "$TEST_FOR_TLS_KEY" ]
+                  then
+                    GENERATE_TLS="yes"
+                  else
+                    load_certs
+                fi
+
+                if [ $GENERATE_TLS ]
                 then
                     echo "No certs were found so we'll need to generate them"
                     generate_certificates "${sidecar_endpoint}" "${sidecar_tls_certificate_secret_arn}" "${sidecar_ca_certificate_secret_arn}"
@@ -1137,7 +1160,7 @@ Resources:
     Properties:
       Description: Cyral Sidecar secret with client id, secret and container registry key.
       Name: !Sub '/cyral/sidecars/${SidecarId}/secrets'
-      SecretString: !Sub '{"clientId":"${ClientID}", "clientSecret": "${ClientSecret}", "registryKey":"${ContainerRegistry}"}'
+      SecretString: !Sub '{"clientId":"${ClientID}", "clientSecret": "${ClientSecret}", "registryKey":"${ContainerRegistryKey}"}'
       KmsKeyId: !Ref AWS::NoValue
       Tags:
         - Key: "Stack"
