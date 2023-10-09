@@ -608,7 +608,7 @@ Resources:
                         eval $(aws ecr --no-include-email get-login --region ${AWS::Region})
                     elif [ -n "$key" ]; then
                         echo "(login): Logging in to GCR..."
-                        echo "$key" | docker login -u ${ContainerRegistryUsername} --password-stdin https://gcr.io
+                        echo "$key" | base64 --decode | docker login -u ${ContainerRegistryUsername} --password-stdin https://gcr.io
                     else
                         echo "(login): Won't log in automatically to any image registry. Image registry set to: ${ContainerRegistry}"
                     fi
@@ -720,6 +720,7 @@ Resources:
                     GENERATE_TLS="yes"
                   else
                     load_certs
+                  fi
                 fi
 
                 if [ $GENERATE_TLS ]
