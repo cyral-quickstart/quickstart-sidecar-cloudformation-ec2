@@ -2,9 +2,13 @@
 
 A quick start to deploy a sidecar to AWS EC2 using CloudFormation!
 
+---
+
 ## Architecture
 
 ![Deployment architecture](images/aws_architecture.png)
+
+---
 
 ## Deployment
 
@@ -103,7 +107,9 @@ instances to the protected databases.
 
 See the full list of parameters in the parameters section of the [deployment template](./cft_sidecar.yaml).
 
-### Upgrade
+---
+
+## Upgrade
 
 This quick start supports [1-click upgrade](https://cyral.com/docs/sidecars/manage/upgrade#1-click-upgrade).
 
@@ -116,9 +122,11 @@ with the target version and upgrade the CloudFormation stack.
 
 Learn more in the [sidecar upgrade procedures](https://cyral.com/docs/sidecars/manage/upgrade) page.
 
-### Advanced
+---
 
-Instructions for advanced deployment configurations are available for the following topics:
+## Advanced
+
+Instructions for advanced configurations are available for the following topics:
 
 * [Sidecar certificates](./docs/certificates.md)
 * [Sidecar instance metrics](./docs/metrics.md)
