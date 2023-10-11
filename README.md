@@ -82,10 +82,6 @@ instances to the protected databases.
     `AsgDesired=2`, and `EnableCrossZoneLoadBalancing=true`.
     * Click `Next`, follow the remaining steps of the wizard acknowledging the capabilities requested and confirm the stack creation.
 
-```yaml
-
-```
-
 The example above will create a production-grade configuration and assumes you understand
 the basic concepts of a Cyral sidecar.
 
@@ -128,5 +124,4 @@ Learn more in the [sidecar upgrade procedures](https://cyral.com/docs/sidecars/m
 
 Instructions for advanced configurations are available for the following topics:
 
-* [Sidecar certificates](./docs/certificates.md)
 * [Sidecar instance metrics](./docs/metrics.md)
