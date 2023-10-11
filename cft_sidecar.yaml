@@ -9,7 +9,7 @@ Metadata:
       Parameters:
       - SidecarId
       - ControlPlane
-      - ClientID
+      - ClientId
       - ClientSecret
       - NamePrefix
     - Label:
@@ -73,7 +73,7 @@ Parameters:
     Type: AWS::EC2::VPC::Id
     AllowedPattern: ".+"
 
-  ClientID:
+  ClientId:
     NoEcho: true
     Description: "Sidecar client ID"
     Type: String
@@ -1161,7 +1161,7 @@ Resources:
     Properties:
       Description: Cyral Sidecar secret with client id, secret and container registry key.
       Name: !Sub '/cyral/sidecars/${SidecarId}/secrets'
-      SecretString: !Sub '{"clientId":"${ClientID}", "clientSecret": "${ClientSecret}", "registryKey":"${ContainerRegistryKey}"}'
+      SecretString: !Sub '{"clientId":"${ClientId}", "clientSecret": "${ClientSecret}", "registryKey":"${ContainerRegistryKey}"}'
       KmsKeyId: !Ref AWS::NoValue
       Tags:
         - Key: "Stack"
