@@ -358,6 +358,7 @@ Resources:
                 function package_install(){
                     echo "Updating and installing packages..."
                     yum update -y
+                    yum upgrade -y
                     yum install -y aws-cfn-bootstrap wget ec2-instance-connect docker jq
                 }
 
@@ -708,28 +709,6 @@ Resources:
                 docker_setup
                 docker_compose_install
                 update_nginx_resolver
-                echo "Checking for current certs"
-                # Check if a .env file exists already
-                if ! test -f /home/ec2-user/.env; then
-                  GENERATE_TLS="yes"
-                else
-                  # Test to see if the env file contains a Certificate
-                  TEST_FOR_TLS_KEY=`grep '^CYRAL_CERTIFICATE_MANAGER_TLS_KEY=[A-Za-z0-9\/\+]$'  /home/ec2-user/.env`
-                  if [ -z "$TEST_FOR_TLS_KEY" ]
-                  then
-                    GENERATE_TLS="yes"
-                  else
-                    load_certs
-                  fi
-                fi
-
-                if [ $GENERATE_TLS ]
-                then
-                    echo "No certs were found so we'll need to generate them"
-                    generate_certificates "${sidecar_endpoint}" "${sidecar_tls_certificate_secret_arn}" "${sidecar_ca_certificate_secret_arn}"
-                    echo "Loading newly generated certs"
-                    load_certs
-                fi
                 registry_login
                 retry download_sidecar
                 # TODO :: Remove this after bug fix
