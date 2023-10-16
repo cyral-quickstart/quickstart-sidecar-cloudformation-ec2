@@ -781,7 +781,7 @@ Resources:
                 log_group: !Ref CloudwatchLogGroup
                 tls_skip_verify: 'tls'
                 secrets_location: !Sub '/cyral/sidecars/${SidecarId}/secrets'
-                load_balancer_tls_ports: !If [loadBalancerCertificateArnNotEmpty, 443, !Ref AWS::NoValue]
+                load_balancer_tls_ports: !If [loadBalancerCertificateArnNotEmpty, 443, ""]
                 sidecar_tls_certificate_secret_arn: !Ref SidecarCreatedCertificateSecret
                 sidecar_ca_certificate_secret_arn: !Ref SidecarCACertificateSecret
             post: |
