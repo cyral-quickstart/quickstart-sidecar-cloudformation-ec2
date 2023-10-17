@@ -358,7 +358,6 @@ Resources:
                 function package_install(){
                     echo "Updating and installing packages..."
                     yum update -y
-                    yum upgrade -y
                     yum install -y aws-cfn-bootstrap wget ec2-instance-connect docker jq
                 }
 
