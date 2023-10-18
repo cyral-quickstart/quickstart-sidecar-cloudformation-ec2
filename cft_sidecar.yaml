@@ -477,59 +477,6 @@ Resources:
                     echo "Setting NGINX_RESOLVER to '$NGINX_RESOLVER'..."
                 }
 
-                function put_secret_value() {
-                  secret_arn="$1"
-                  escaped_secret_data="$2"
-                  role_arn="$3"
-                  [ -z "$secret_arn" ] && return
-                  (
-                    if [ -n "$role_arn" ]; then
-                      assume_role_result="$(aws sts assume-role --role-arn $role_arn --role-session-name cyral-sidecar)"
-                      export AWS_ACCESS_KEY_ID=$(echo "$assume_role_result" | jq -r .Credentials.AccessKeyId)
-                      export AWS_SECRET_ACCESS_KEY=$(echo "$assume_role_result" | jq -r .Credentials.SecretAccessKey)
-                      export AWS_SESSION_TOKEN=$(echo "$assume_role_result" | jq -r .Credentials.SessionToken)
-                    fi
-                    aws --region us-east-2 secretsmanager put-secret-value --secret-id $secret_arn --secret-string "$escaped_secret_data"
-                  )
-                }
-
-                function store_cert_data_in_secret() {
-                    key_file="$1"
-                    cert_file="$2"
-                    cert_secret="$3"
-                    key_file_data=$(base64 $key_file -w 0)
-                    cert_file_data=$(base64 $cert_file -w 0)
-                    escaped_secret_data="{\"key\":\"$key_file_data\",\"cert\":\"$cert_file_data\"}"
-                    put_secret_value $cert_secret "$escaped_secret_data"
-                }
-
-                function generate_certificates () {
-                    KEY_SIZE=4096
-                    CERT_DURATION=365000
-                    CERT_COUNTRY="US"
-                    CERT_PROVINCE="CA"
-                    CERT_LOCALITY="Redwood City"
-                    CERT_ORGANIZATION="Cyral Inc."
-                    CERT_HOST=$1
-                    CLIENT_CERT_SECRET_ID=$2
-                    CA_CERT_SECRET_ID=$3
-                    TMP_CERT_DIR="/tmp/cyral_certs"
-                    CA_KEY_FILE="$TMP_CERT_DIR/key-ca.pem"
-                    CA_CERT_FILE="$TMP_CERT_DIR/cert-ca.pem"
-                    CLIENT_KEY_FILE="$TMP_CERT_DIR/key-tls.pem"
-                    CLIENT_CERT_FILE="$TMP_CERT_DIR/cert-tls.pem"
-                    CLIENT_REQ_FILE="$TMP_CERT_DIR/req-tls.csr"
-
-                    mkdir $TMP_CERT_DIR
-                    openssl genrsa $KEY_SIZE > $CA_KEY_FILE
-                    openssl req -new -x509 -nodes -days $CERT_DURATION -key $CA_KEY_FILE -out $CA_CERT_FILE -subj "/C=$CERT_COUNTRY/ST=$CERT_PROVINCE/L=$CERT_LOCALITY/O=$CERT_ORGANIZATION/CN=$CERT_HOST" -addext "keyUsage = keyCertSign, cRLSign" -addext "basicConstraints = CA:TRUE" -addext "subjectKeyIdentifier = hash" -addext "authorityKeyIdentifier = keyid:always"
-                    openssl req -newkey rsa:$KEY_SIZE -nodes -keyout $CLIENT_KEY_FILE -out $CLIENT_REQ_FILE -subj "/C=$CERT_COUNTRY/ST=$CERT_PROVINCE/L=$CERT_LOCALITY/O=$CERT_ORGANIZATION/CN=$CERT_HOST" -addext "subjectAltName = DNS:$CERT_HOST" -addext "keyUsage = digitalSignature" -addext "extendedKeyUsage = serverAuth" -addext "basicConstraints = CA:FALSE" -addext "subjectKeyIdentifier = hash"
-                    openssl x509 -req -days $CERT_DURATION -set_serial 01 -in $CLIENT_REQ_FILE -out $CLIENT_CERT_FILE -CA $CA_CERT_FILE -CAkey $CA_KEY_FILE
-
-                    store_cert_data_in_secret $CA_KEY_FILE $CA_CERT_FILE $CA_CERT_SECRET_ID
-                    store_cert_data_in_secret $CLIENT_KEY_FILE $CLIENT_CERT_FILE $CLIENT_CERT_SECRET_ID
-                }
-
                 function get_token () {
                     echo "Getting Control Plane Token using port $1..."
                     local url_token="https://${ControlPlane}:$1/v1/users/oidc/token"
