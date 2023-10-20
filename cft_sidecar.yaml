@@ -734,8 +734,6 @@ Resources:
                 tls_skip_verify: 'tls'
                 secrets_location: !If [hasSecretsLocation, !Ref SecretsLocation, !Sub '/cyral/sidecars/${SidecarId}/secrets']
                 load_balancer_tls_ports: !If [loadBalancerCertificateArnNotEmpty, 443, '']
-                sidecar_tls_certificate_secret_arn: !Ref SidecarCreatedCertificateSecret
-                sidecar_ca_certificate_secret_arn: !Ref SidecarCACertificateSecret
             post: |
               launch
 
@@ -960,7 +958,7 @@ Resources:
       Certificates:
       - CertificateArn: !Ref LoadBalancerCertificateArn
 
-  NLBTargetGroupTLSTLS443:
+  NLBTargetGroupTLS443:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Condition: loadBalancerCertificateArnNotEmpty
     Properties:
