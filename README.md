@@ -31,6 +31,19 @@ The elements shown in the architecture diagram above are deployed by the [Cyral 
 
 * Make sure you have access to your AWS environment with an account that has sufficient permissions to deploy the sidecar. The minimum permissions must allow for the creation of the elements listed previously. We recommend Administrator permissions (`AdministratorAccess` policy) as the module creates an IAM role.
 
+#### Certificates Needed for the Sidecar
+
+This deployment looks for two secrets to be created prior to deployment:
+
+* Sidecar CA certificate
+* Sidecar self-signed certificate
+
+These certificates are used to terminate TLS connections between the client and sidecar as well as to sign requests that are proxied through the sidecar. These certificates should be from a trusted certificate authority. 
+
+Please refer to the [Advanced](#advanced) section of this guide on deploying the certificates.
+
+> **NOTE ::** These certificates must be created before deployment or your deploy will fail.
+
 ### Examples
 
 #### Quick Start
@@ -120,8 +133,9 @@ Learn more in the [sidecar upgrade procedures](https://cyral.com/docs/sidecars/m
 
 ---
 
-## Advanced
+## <a name="advanced"/>Advanced
 
 Instructions for advanced configurations are available for the following topics:
 
+* [Sidecar certificates](./docs/certificates.md)
 * [Sidecar instance metrics](./docs/metrics.md)
