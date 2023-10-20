@@ -606,30 +606,13 @@ Resources:
                         fi
                     fi
                     access_token=$(echo "$token" | jq -r .access_token)
-                    url="https://${ControlPlane}/deploy/docker-compose?TemplateVersion=$SIDECAR_VERSION"
+                    url="https://${ControlPlane}/deploy/docker-compose?TemplateType=cloudformation&TemplateVersion=$SIDECAR_VERSION"
                     echo "Trying to download the sidecar template from: $url"
                     if ! curl -fsS --no-progress-meter -o /home/ec2-user/sidecar.compose.yaml -L "$url" -H "Authorization: Bearer $access_token" ; then
                         echo "Unable to download compose file for version $SIDECAR_VERSION, please make sure all parameters are correct"
                         return 1
                     fi
                     return 0
-                }
-
-                # TODO :: Remove after yaml bug fix
-                function temp_fix_sidecar_yaml () {
-                  # Check for the Docker Compose File
-                  # Return if we don't find the file
-                  if ! test -f /home/ec2-user/sidecar.compose.yaml; then
-                        return 1
-                  fi
-                  
-                  # Check to see if the line was already added
-                  # Return if we find the line because there's nothing left to do
-                  if grep -q 'load-balancer-tls-ports' /home/ec2-user/sidecar.compose.yaml; then
-                        return 0
-                  fi
-
-                  sudo sed -i '/^      --proxy-ca-cert-filename cert-ca.pem/a\      --load-balancer-tls-ports "$LOAD_BALANCER_TLS_PORTS"' /home/ec2-user/sidecar.compose.yaml
                 }
 
                 function registry_login () {
@@ -746,8 +729,6 @@ Resources:
                 load_idp_certs
                 registry_login
                 retry download_sidecar
-                # TODO :: Remove this after bug fix
-                temp_fix_sidecar_yaml
 
                 # Initializing environment variables
                 env_var=$(cat <<EOF
