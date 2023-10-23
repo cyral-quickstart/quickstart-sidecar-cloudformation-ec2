@@ -12,8 +12,6 @@ Metadata:
       - ClientId
       - ClientSecret
       - NamePrefix
-      - SidecarTLSCertificateSecretArn
-      - SidecarCACertificateSecretArn
     - Label:
         default: 'Networking and Security Configuration'
       Parameters:
@@ -36,6 +34,8 @@ Metadata:
       - SecretsLocation
       - SidecarTLSCertificateRoleArn
       - SidecarCACertificateRoleArn
+      - SidecarTLSCertificateSecretArn
+      - SidecarCACertificateSecretArn
     - Label:
         default: 'High Availability'
       Parameters:
@@ -126,11 +126,13 @@ Parameters:
 
   SidecarTLSCertificateSecretArn:
     Type: String
-    Description: ARN of TLS certificate needed by the sidecar to terminate TLS connections.
+    Description: (Optional) ARN of TLS certificate needed by the sidecar to terminate TLS connections.
+    Default: ""
 
   SidecarCACertificateSecretArn:
     Type: String
-    Description: ARN of CA certificate needed by the sidecar to sign proxied TLS connections.
+    Description: (Optional) ARN of CA certificate needed by the sidecar to sign proxied TLS connections.
+    Default: ""
 
   LoadBalancerScheme:
     Description: "EC2 network load balancer scheme ('internal' or 'internet-facing')"
@@ -380,8 +382,6 @@ Resources:
                 - secrets_location: !If [hasSecretsLocation, !Ref SecretsLocation, !Sub '/cyral/sidecars/${SidecarId}/secrets']
               - !If [sidecarTLSCertificateDoNotAssumeRole, !Ref SidecarTLSCertificateSecretArn, !Ref AWS::NoValue]
               - !If [sidecarCACertificateDoNotAssumeRole, !Ref SidecarCACertificateSecretArn, !Ref AWS::NoValue]
-              - !Ref SidecarTLSCertificateSecretArn
-              - !Ref SidecarCACertificateSecretArn
             Effect: Allow
           - Action:
               - "ecr:GetAuthorizationToken"
@@ -548,12 +548,14 @@ Resources:
                 function load_certs() {
                     echo "Loading certificates..."
                     local sidecar_tls_cert_secret_value sidecar_ca_cert_secret_value
-                    sidecar_tls_cert_secret_value=$(
-                        get_secret_value "${sidecar_tls_certificate_secret_arn}" "${SidecarTLSCertificateRoleArn}"
-                    )
-                    sidecar_ca_cert_secret_value=$(
-                        get_secret_value "${sidecar_ca_certificate_secret_arn}" "${SidecarCACertificateRoleArn}"
-                    )
+                    if ! sidecar_tls_cert_secret_value=$(get_secret_value "${sidecar_tls_certificate_secret_arn}" "${SidecarTLSCertificateRoleArn}"); then
+                      echo "Unable to fetch shared TLS certificate"
+                      echo "Warning: ${sidecar_tls_certificate_secret_arn}"
+                    fi
+                    if ! sidecar_ca_cert_secret_value=$(get_secret_value "${sidecar_ca_certificate_secret_arn}" "${SidecarCACertificateRoleArn}"); then
+                      echo "Unable to fetch shared CA certificate"
+                      echo "Warning: ${sidecar_ca_certificate_secret_arn}"
+                    fi
                     SIDECAR_TLS_KEY=$(echo "$sidecar_tls_cert_secret_value" | extract_key_from_json_input | base64 -w 0)
                     SIDECAR_TLS_CERT=$(echo "$sidecar_tls_cert_secret_value" | extract_cert_from_json_input | base64 -w 0)
                     SIDECAR_CA_KEY=$(echo "$sidecar_ca_cert_secret_value" | extract_key_from_json_input | base64 -w 0)
@@ -637,7 +639,7 @@ Resources:
                     local key=$GCR_REG_KEY
                     if [[ ${ContainerRegistry} == *"aws"* ]]; then
                         echo "(login): Logging in to AWS ECR..."
-                        eval $(aws ecr --no-include-email get-login --region ${AWS::Region})
+                        eval $(aws ecr get-login-password --region ${AWS::Region})
                     elif [ -n "$key" ]; then
                         echo "(login): Logging in to GCR..."
                         echo "$key" | base64 --decode | docker login -u ${ContainerRegistryUsername} --password-stdin https://gcr.io
@@ -666,8 +668,8 @@ Resources:
                     retry docker compose -f sidecar.compose.yaml pull -q
                     retry docker compose -f sidecar.compose.yaml up -d
                 }
-              - sidecar_tls_certificate_secret_arn: !Ref SidecarTLSCertificateSecretArn
-                sidecar_ca_certificate_secret_arn: !Ref SidecarCACertificateSecretArn
+              - sidecar_tls_certificate_secret_arn: !If [sidecarTLSCertificateSecretArnNotEmpty, !Ref SidecarTLSCertificateSecretArn, '']
+                sidecar_ca_certificate_secret_arn: !If [sidecarCACertificateSecretArnNotEmpty, !Ref SidecarCACertificateSecretArn, '']
                 secrets_location: !If [hasSecretsLocation, !Ref SecretsLocation, !Sub '/cyral/sidecars/${SidecarId}/secrets']
             pre:
               !Sub
