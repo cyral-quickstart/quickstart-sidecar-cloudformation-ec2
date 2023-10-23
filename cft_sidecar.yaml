@@ -625,7 +625,7 @@ Resources:
                         fi
                     fi
                     access_token=$(echo "$token" | jq -r .access_token)
-                    url="https://${ControlPlane}/deploy/docker-compose?TemplateVersion=$SIDECAR_VERSION"
+                    url="https://${ControlPlane}/deploy/docker-compose?TemplateType=cloudformation&TemplateVersion=$SIDECAR_VERSION"
                     echo "Trying to download the sidecar template from: $url"
                     if ! curl -fsS --no-progress-meter -o /home/ec2-user/sidecar.compose.yaml -L "$url" -H "Authorization: Bearer $access_token" ; then
                         echo "Unable to download compose file for version $SIDECAR_VERSION, please make sure all parameters are correct"
