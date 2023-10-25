@@ -17,6 +17,8 @@ This method is more suitable for POC deployments as each sidecar instance will g
 
 In this deployment scenario, each sidecar instance will generate its own self signed certificates during deployment. These certificates are NOT shared between instances in deployments where the sidecar is scaled to 2 or more instances.
 
+This scenario is the default behavior for a sidecar deployment if you do not supply any custom certificates via the `LoadBalancerCertificateArn` template parameter or by creating the secrets listed below.
+
 ### Custom Certificates Provided During Deployment
 
 This method is suitable for both POC and production deployments as the certificates are shared across multiple instances.

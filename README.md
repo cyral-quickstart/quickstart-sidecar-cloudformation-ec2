@@ -36,7 +36,6 @@ The elements shown in the architecture diagram above are deployed by the [Cyral 
 
 #### Quick Start
 
-* (Optional) Create/Import your own certificate(s) to be used by this template.
 * Download the deployment template in [cft_sidecar.yaml](./cft_sidecar.yaml).
 * Log in to AWS and open the [CloudFormation console](http://console.aws.amazon.com/cloudformation/home).
     * Create a new stack.
@@ -50,7 +49,6 @@ The elements shown in the architecture diagram above are deployed by the [Cyral 
     and with the database you plan to protect with this sidecar.
     * Set parameters `AssociatePublicIpAddress=true` and `LoadBalancerScheme='internet-facing'`
     to deploy a public sidecar.
-    * (Optional) Configure the Sidecar certificates in accordance with your deployment decision.
     * Click `Next`, follow the remaining steps of the wizard acknowledging the capabilities requested and confirm the stack creation.
 
 This quick start will create the simplest configuration possible on your AWS account
@@ -70,6 +68,7 @@ instances to the protected databases.
 
 #### Production Starting Point
 
+* (Optional) Create/Import your own certificate(s) to be used by this template.
 * Download the deployment template in [cft_sidecar.yaml](./cft_sidecar.yaml).
 * Log in to AWS and open the [CloudFormation console](http://console.aws.amazon.com/cloudformation/home).
     * Create a new stack.
@@ -83,6 +82,7 @@ instances to the protected databases.
     and to the database you plan to protect with this sidecar.
     * Set `AssociatePublicIpAddress=false`, `LoadBalancerScheme='internal'`, `AsgMin=1`, `AsgMax=4`, 
     `AsgDesired=2`, and `EnableCrossZoneLoadBalancing=true`.
+    * (Optional) Configure the Sidecar certificates in accordance with your deployment decision.
     * Click `Next`, follow the remaining steps of the wizard acknowledging the capabilities requested and confirm the stack creation.
 
 The example above will create a production-grade configuration and assumes you understand
