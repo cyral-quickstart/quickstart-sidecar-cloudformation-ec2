@@ -30,6 +30,7 @@ The elements shown in the architecture diagram above are deployed by the [Cyral 
 ### Requirements
 
 * Make sure you have access to your AWS environment with an account that has sufficient permissions to deploy the sidecar. The minimum permissions must allow for the creation of the elements listed previously. We recommend Administrator permissions (`AdministratorAccess` policy) as the module creates an IAM role.
+* Decide your certificate deployment type. Refer to the [Sidecar certificates](./docs/certificates.md) document for additional guidance.
 
 ### Examples
 
@@ -67,6 +68,7 @@ instances to the protected databases.
 
 #### Production Starting Point
 
+* (Optional) Create/Import your own certificate(s) to be used by this template.
 * Download the deployment template in [cft_sidecar.yaml](./cft_sidecar.yaml).
 * Log in to AWS and open the [CloudFormation console](http://console.aws.amazon.com/cloudformation/home).
     * Create a new stack.
@@ -80,6 +82,7 @@ instances to the protected databases.
     and to the database you plan to protect with this sidecar.
     * Set `AssociatePublicIpAddress=false`, `LoadBalancerScheme='internal'`, `AsgMin=1`, `AsgMax=4`, 
     `AsgDesired=2`, and `EnableCrossZoneLoadBalancing=true`.
+    * (Optional) Configure the Sidecar certificates in accordance with your deployment decision.
     * Click `Next`, follow the remaining steps of the wizard acknowledging the capabilities requested and confirm the stack creation.
 
 The example above will create a production-grade configuration and assumes you understand
@@ -120,8 +123,9 @@ Learn more in the [sidecar upgrade procedures](https://cyral.com/docs/sidecars/m
 
 ---
 
-## Advanced
+## <a name="advanced"/>Advanced
 
 Instructions for advanced configurations are available for the following topics:
 
+* [Sidecar certificates](./docs/certificates.md)
 * [Sidecar instance metrics](./docs/metrics.md)
