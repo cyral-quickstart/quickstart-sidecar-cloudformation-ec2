@@ -800,10 +800,7 @@ Resources:
                 CYRAL_SIDECAR_ENDPOINT=${sidecar_endpoint}
                 CYRAL_SIDECAR_VERSION=$SIDECAR_VERSION
 
-                CYRAL_DEPLOYMENT_PROPERTIES='{
-                  "account-id": "${AWS::AccountId}",
-                  "region": "${AWS::Region}"
-                }'
+                CYRAL_DEPLOYMENT_PROPERTIES='{"account-id": "${AWS::AccountId}","region": "${AWS::Region}"}'
                 CYRAL_CERTIFICATE_MANAGER_TLS_KEY=${!SIDECAR_TLS_KEY}
                 CYRAL_CERTIFICATE_MANAGER_TLS_CERT=${!SIDECAR_TLS_CERT}
                 CYRAL_CERTIFICATE_MANAGER_CA_KEY=${!SIDECAR_CA_KEY}
