@@ -40,6 +40,7 @@ Metadata:
     - Label:
         default: 'High Availability'
       Parameters:
+      - DeployLoadBalancer
       - AsgMin
       - AsgMax
       - AsgDesired
@@ -213,6 +214,14 @@ Parameters:
     Default: "2"
     AllowedPattern: "[0-9]+"
 
+  DeployLoadBalancer:
+    Description: "Deploy or not the load balancer and target groups. This option makes the ASG have only one replica, irrelevant of the Asg Min Max and Desired"
+    Type: "String"
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+
   CustomTag:
     Type: String
     Description: (Optional) Custom tag to be added in the sidecar resources. Ex:"key=value".
@@ -234,8 +243,9 @@ Parameters:
 Conditions:
   useCustomTag: !Not [!Equals [!Ref CustomTag, '']]
   hasSSHKeyName: !Not [!Equals [!Ref SSHKeyName, '']]
-  loadBalancerCertificateArnNotEmpty: !Not [!Equals [!Ref LoadBalancerCertificateArn, '']]
-  loadBalancerCertificateArnEmpty: !Equals [!Ref LoadBalancerCertificateArn, '']
+  deployLoadBalancer: !Equals [!Ref DeployLoadBalancer, 'true']
+  loadBalancerCertificateArnNotEmpty: !And [!Not [!Equals [!Ref LoadBalancerCertificateArn, '']], !Condition deployLoadBalancer]
+  loadBalancerCertificateArnEmpty: !And [!Equals [!Ref LoadBalancerCertificateArn, ''], !Condition deployLoadBalancer]
   sidecarDNSNameNotEmpty: !Not [!Equals [!Ref SidecarDNSName, '']]
   hasSecretsLocation: !Not [!Equals [!Ref SecretsLocation, '']]
   sidecarTLSCertificateSecretArnEmpty: !Equals [!Ref SidecarTLSCertificateSecretArn, '']
@@ -294,23 +304,23 @@ Resources:
         LaunchTemplateId: !Ref SidecarLaunchTemplate
         Version: !GetAtt SidecarLaunchTemplate.LatestVersionNumber
       VPCZoneIdentifier: !Ref Subnets
-      MinSize: !Ref AsgMin
-      MaxSize: !Ref AsgMax
+      MinSize: !If [deployLoadBalancer, !Ref AsgMin, "1"]
+      MaxSize: !If [deployLoadBalancer, !Ref AsgMax, "1"]
       Cooldown: "0"
-      DesiredCapacity: !Ref AsgDesired
+      DesiredCapacity: !If [deployLoadBalancer, !Ref AsgDesired, "1"]
       HealthCheckType: EC2
       HealthCheckGracePeriod: 600
       TargetGroupARNs:
-        - !Ref NLBTargetGroup453
-        - !Ref NLBTargetGroup1433
-        - !Ref NLBTargetGroup1521
-        - !Ref NLBTargetGroup3306
-        - !Ref NLBTargetGroup5432
-        - !Ref NLBTargetGroup5439
-        - !Ref NLBTargetGroup27017
-        - !Ref NLBTargetGroup27018
-        - !Ref NLBTargetGroup27019
-        - !If [loadBalancerCertificateArnNotEmpty, !Ref NLBTargetGroupTLS443, !Ref NLBTargetGroup443]
+        - !If [deployLoadBalancer, !Ref NLBTargetGroup453, !Ref AWS::NoValue]
+        - !If [deployLoadBalancer, !Ref NLBTargetGroup1433, !Ref AWS::NoValue]
+        - !If [deployLoadBalancer, !Ref NLBTargetGroup1521, !Ref AWS::NoValue]
+        - !If [deployLoadBalancer, !Ref NLBTargetGroup3306, !Ref AWS::NoValue]
+        - !If [deployLoadBalancer, !Ref NLBTargetGroup5432, !Ref AWS::NoValue]
+        - !If [deployLoadBalancer, !Ref NLBTargetGroup5439, !Ref AWS::NoValue]
+        - !If [deployLoadBalancer, !Ref NLBTargetGroup27017, !Ref AWS::NoValue]
+        - !If [deployLoadBalancer, !Ref NLBTargetGroup27018, !Ref AWS::NoValue]
+        - !If [deployLoadBalancer, !Ref NLBTargetGroup27019, !Ref AWS::NoValue]
+        - !If [deployLoadBalancer, !If [loadBalancerCertificateArnNotEmpty, !Ref NLBTargetGroupTLS443, !Ref NLBTargetGroup443], !Ref AWS::NoValue]
       MetricsCollection:
         - Granularity: "1Minute"
           Metrics:
@@ -771,6 +781,14 @@ Resources:
                   retry download_sidecar
                 fi
 
+                CYRAL_SIDECAR_ENDPOINT="${sidecar_endpoint}"
+                if [ -z "$CYRAL_SIDECAR_ENDPOINT" ]; then
+                    CYRAL_SIDECAR_ENDPOINT=$(curl --fail --silent --max-time 1 \
+                        -H "X-aws-ec2-metadata-token: $(curl --max-time 1 --fail --silent \
+                        -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")" \
+                        http://169.254.169.254/latest/meta-data/public-ipv4 || (hostname -I 2>/dev/null || echo "manually-set-endpoint") | awk '{print $1}')
+                fi
+
                 # Initializing environment variables
                 env_var=$(cat <<EOF
                 SIDECAR_VERSION=$SIDECAR_VERSION
@@ -797,8 +815,9 @@ Resources:
                 CYRAL_SIDECAR_CLIENT_ID=${!SIDECAR_CLIENT_ID}
                 CYRAL_SIDECAR_CLIENT_SECRET=${!SIDECAR_CLIENT_SECRET}
                 CYRAL_CONTROL_PLANE=${ControlPlane}
-                CYRAL_SIDECAR_ENDPOINT=${sidecar_endpoint}
                 CYRAL_SIDECAR_VERSION=$SIDECAR_VERSION
+                CYRAL_SIDECAR_ENDPOINT=$CYRAL_SIDECAR_ENDPOINT
+
 
                 CYRAL_DEPLOYMENT_PROPERTIES='{"account-id": "${AWS::AccountId}","region": "${AWS::Region}"}'
                 CYRAL_CERTIFICATE_MANAGER_TLS_KEY=${!SIDECAR_TLS_KEY}
@@ -813,7 +832,7 @@ Resources:
                 $env_var
                 $proxy_env
                 EOF
-              - sidecar_endpoint: !If [sidecarDNSNameNotEmpty, !Ref SidecarDNSName, !GetAtt LoadBalancer.DNSName]
+              - sidecar_endpoint: !If [deployLoadBalancer, !If [sidecarDNSNameNotEmpty, !Ref SidecarDNSName, !GetAtt LoadBalancer.DNSName], ""]
                 log_group: !Ref CloudwatchLogGroup
                 tls_skip_verify: 'tls'
                 secrets_location: !If [hasSecretsLocation, !Ref SecretsLocation, !Sub '/cyral/sidecars/${SidecarId}/secrets']
@@ -899,6 +918,7 @@ Resources:
 
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Condition: deployLoadBalancer
     Properties:
       Name: !Ref NamePrefix
       Type: network
@@ -919,6 +939,7 @@ Resources:
   # Load Balancer Listeners using TCP
   NLBListeners453:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: deployLoadBalancer
     Properties:
       DefaultActions:
       - Type: forward
@@ -929,6 +950,7 @@ Resources:
 
   NLBListeners1433:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: deployLoadBalancer
     Properties:
       DefaultActions:
       - Type: forward
@@ -939,6 +961,7 @@ Resources:
 
   NLBListeners1521:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: deployLoadBalancer
     Properties:
       DefaultActions:
       - Type: forward
@@ -949,6 +972,7 @@ Resources:
 
   NLBListeners3306:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: deployLoadBalancer
     Properties:
       DefaultActions:
       - Type: forward
@@ -959,6 +983,7 @@ Resources:
 
   NLBListeners5432:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: deployLoadBalancer
     Properties:
       DefaultActions:
       - Type: forward
@@ -969,6 +994,7 @@ Resources:
 
   NLBListeners5439:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: deployLoadBalancer
     Properties:
       DefaultActions:
       - Type: forward
@@ -979,6 +1005,7 @@ Resources:
 
   NLBListeners27017:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: deployLoadBalancer
     Properties:
       DefaultActions:
       - Type: forward
@@ -989,6 +1016,7 @@ Resources:
 
   NLBListeners27018:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: deployLoadBalancer
     Properties:
       DefaultActions:
       - Type: forward
@@ -999,6 +1027,7 @@ Resources:
 
   NLBListeners27019:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: deployLoadBalancer
     Properties:
       DefaultActions:
       - Type: forward
@@ -1009,6 +1038,7 @@ Resources:
 
   NLBListeners31010:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: deployLoadBalancer
     Properties:
       DefaultActions:
       - Type: forward
@@ -1078,6 +1108,7 @@ Resources:
 
   NLBTargetGroup453:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: deployLoadBalancer
     Properties:
       Port: 453
       HealthCheckPort: '9000'
@@ -1092,6 +1123,7 @@ Resources:
 
   NLBTargetGroup1433:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: deployLoadBalancer
     Properties:
       Port: 1433
       HealthCheckPort: '9000'
@@ -1106,6 +1138,7 @@ Resources:
 
   NLBTargetGroup1521:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: deployLoadBalancer
     Properties:
       Port: 1521
       HealthCheckPort: '9000'
@@ -1120,6 +1153,7 @@ Resources:
 
   NLBTargetGroup3306:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: deployLoadBalancer
     Properties:
       Port: 3306
       HealthCheckPort: '9000'
@@ -1134,6 +1168,7 @@ Resources:
 
   NLBTargetGroup5432:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: deployLoadBalancer
     Properties:
       Port: 5432
       HealthCheckPort: '9000'
@@ -1148,6 +1183,7 @@ Resources:
 
   NLBTargetGroup5439:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: deployLoadBalancer
     Properties:
       Port: 5439
       HealthCheckPort: '9000'
@@ -1162,6 +1198,7 @@ Resources:
 
   NLBTargetGroup27017:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: deployLoadBalancer
     Properties:
       Port: 27017
       HealthCheckPort: '9000'
@@ -1176,6 +1213,7 @@ Resources:
 
   NLBTargetGroup27018:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: deployLoadBalancer
     Properties:
       Port: 27018
       HealthCheckPort: '9000'
@@ -1190,6 +1228,7 @@ Resources:
 
   NLBTargetGroup27019:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: deployLoadBalancer
     Properties:
       Port: 27019
       HealthCheckPort: '9000'
@@ -1204,6 +1243,7 @@ Resources:
 
   NLBTargetGroup31010:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: deployLoadBalancer
     Properties:
       Port: 31010
       HealthCheckPort: '9000'
@@ -1235,11 +1275,11 @@ Resources:
 Outputs:
   SidecarDNS:
     Description: Sidecar DNS name
-    Value: !GetAtt LoadBalancer.DNSName
+    Value: !If [deployLoadBalancer, !GetAtt LoadBalancer.DNSName, "NA"]
 
   SidecarLoadBalancerDNS:
     Description: Sidecar load balancer DNS name
-    Value: !GetAtt LoadBalancer.DNSName
+    Value: !If [deployLoadBalancer, !GetAtt LoadBalancer.DNSName, "NA"]
 
   SidecarSecurityGroupID:
     Description: Sidecar security group id
