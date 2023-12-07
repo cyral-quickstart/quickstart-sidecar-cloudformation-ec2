@@ -45,6 +45,12 @@ Metadata:
       - AsgMax
       - AsgDesired
     - Label:
+        default: 'Custom User Data'
+      Parameters:
+      - CustomUserDataPre
+      - CustomUserDataPreSidecarStart
+      - CustomUserDataPost
+    - Label:
         default: 'Snowflake Configuration'
       Parameters:
       - IdPSSOLoginURL
@@ -239,6 +245,21 @@ Parameters:
     AllowedValues:
       - "true"
       - "false"
+
+  CustomUserDataPre:
+    Type: String
+    Description: (Optional) Ancillary consumer supplied user-data script. Provide Bash script commands to be executed before the sidecar installation. Ex:"echo 'TEST'".
+    Default: ""
+
+  CustomUserDataPreSidecarStart:
+    Type: String
+    Description: (Optional) Ancillary consumer supplied user-data script. Provide Bash script commands to be executed before the sidecar starts. Ex:"echo 'TEST'"
+    Default: ""
+
+  CustomUserDataPost:
+    Type: String
+    Description: (Optional) Ancillary consumer supplied user-data script. Provide Bash script commands to be executed after the sidecar starts. Ex:"echo 'TEST'"
+    Default: ""
 
 Conditions:
   useCustomTag: !Not [!Equals [!Ref CustomTag, '']]
@@ -462,8 +483,11 @@ Resources:
             #!/bin/bash -e
 
             ${functions}
+            ${CustomUserDataPre}
             ${pre}
+            ${CustomUserDataPreSidecarStart}
             ${post}
+            ${CustomUserDataPost}
 
             /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource AutoScalingGroupSidecar --region ${AWS::Region}
           - functions:
