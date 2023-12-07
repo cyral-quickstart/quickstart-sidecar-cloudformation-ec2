@@ -37,6 +37,7 @@ Metadata:
       - SidecarTLSCertificateSecretArn
       - SidecarCACertificateSecretArn
       - UseSingleContainer
+      - IAMPolicies
     - Label:
         default: 'High Availability'
       Parameters:
@@ -246,6 +247,11 @@ Parameters:
       - "true"
       - "false"
 
+  IAMPolicies:
+    Type: CommaDelimitedList
+    Description: (Optional) List of IAM policies ARNs that will be attached to the sidecar IAM role (Comma Delimited List)
+    Default: ""
+
   CustomUserDataPre:
     Type: String
     Description: (Optional) Ancillary consumer supplied user-data script. Provide Bash script commands to be executed before the sidecar installation. Ex:"echo 'TEST'".
@@ -265,6 +271,7 @@ Conditions:
   useCustomTag: !Not [!Equals [!Ref CustomTag, '']]
   hasSSHKeyName: !Not [!Equals [!Ref SSHKeyName, '']]
   deployLoadBalancer: !Equals [!Ref DeployLoadBalancer, 'true']
+  mustAttachIAMPolicies: !Not [!Equals [!Join ["", !Ref IAMPolicies], ""]]
   loadBalancerCertificateArnNotEmpty: !And [!Not [!Equals [!Ref LoadBalancerCertificateArn, '']], !Condition deployLoadBalancer]
   loadBalancerCertificateArnEmpty: !And [!Equals [!Ref LoadBalancerCertificateArn, ''], !Condition deployLoadBalancer]
   sidecarDNSNameNotEmpty: !Not [!Equals [!Ref SidecarDNSName, '']]
@@ -394,6 +401,7 @@ Resources:
                 - ec2.amazonaws.com
             Action:
               - "sts:AssumeRole"
+      ManagedPolicyArns: !If [mustAttachIAMPolicies, !Ref IAMPolicies, !Ref AWS::NoValue]
 
   SidecarHostPolicy:
     Type: "AWS::IAM::Policy"
