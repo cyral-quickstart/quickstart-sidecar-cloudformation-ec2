@@ -37,6 +37,7 @@ Metadata:
       - SidecarTLSCertificateSecretArn
       - SidecarCACertificateSecretArn
       - UseSingleContainer
+      - IAMPolicies
     - Label:
         default: 'High Availability'
       Parameters:
@@ -44,6 +45,12 @@ Metadata:
       - AsgMin
       - AsgMax
       - AsgDesired
+    - Label:
+        default: 'Custom User Data'
+      Parameters:
+      - CustomUserDataPre
+      - CustomUserDataPreSidecarStart
+      - CustomUserDataPost
     - Label:
         default: 'Snowflake Configuration'
       Parameters:
@@ -240,10 +247,31 @@ Parameters:
       - "true"
       - "false"
 
+  IAMPolicies:
+    Type: CommaDelimitedList
+    Description: (Optional) List of IAM policies ARNs that will be attached to the sidecar IAM role (Comma Delimited List)
+    Default: ""
+
+  CustomUserDataPre:
+    Type: String
+    Description: (Optional) Ancillary consumer supplied user-data script. Provide Bash script commands to be executed before the sidecar installation. Ex:"echo 'TEST'".
+    Default: ""
+
+  CustomUserDataPreSidecarStart:
+    Type: String
+    Description: (Optional) Ancillary consumer supplied user-data script. Provide Bash script commands to be executed before the sidecar starts. Ex:"echo 'TEST'"
+    Default: ""
+
+  CustomUserDataPost:
+    Type: String
+    Description: (Optional) Ancillary consumer supplied user-data script. Provide Bash script commands to be executed after the sidecar starts. Ex:"echo 'TEST'"
+    Default: ""
+
 Conditions:
   useCustomTag: !Not [!Equals [!Ref CustomTag, '']]
   hasSSHKeyName: !Not [!Equals [!Ref SSHKeyName, '']]
   deployLoadBalancer: !Equals [!Ref DeployLoadBalancer, 'true']
+  mustAttachIAMPolicies: !Not [!Equals [!Join ["", !Ref IAMPolicies], ""]]
   loadBalancerCertificateArnNotEmpty: !And [!Not [!Equals [!Ref LoadBalancerCertificateArn, '']], !Condition deployLoadBalancer]
   loadBalancerCertificateArnEmpty: !And [!Equals [!Ref LoadBalancerCertificateArn, ''], !Condition deployLoadBalancer]
   sidecarDNSNameNotEmpty: !Not [!Equals [!Ref SidecarDNSName, '']]
@@ -373,6 +401,7 @@ Resources:
                 - ec2.amazonaws.com
             Action:
               - "sts:AssumeRole"
+      ManagedPolicyArns: !If [mustAttachIAMPolicies, !Ref IAMPolicies, !Ref AWS::NoValue]
 
   SidecarHostPolicy:
     Type: "AWS::IAM::Policy"
@@ -462,8 +491,11 @@ Resources:
             #!/bin/bash -e
 
             ${functions}
+            ${CustomUserDataPre}
             ${pre}
+            ${CustomUserDataPreSidecarStart}
             ${post}
+            ${CustomUserDataPost}
 
             /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource AutoScalingGroupSidecar --region ${AWS::Region}
           - functions:
@@ -656,7 +688,7 @@ Resources:
                     local key=$GCR_REG_KEY
                     if [[ ${ContainerRegistry} == *"aws"* ]]; then
                         echo "(login): Logging in to AWS ECR..."
-                        eval $(aws ecr get-login-password --region ${AWS::Region})
+                        aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
                     elif [ -n "$key" ]; then
                         echo "(login): Logging in to GCR..."
                         echo "$key" | base64 --decode | docker login -u ${ContainerRegistryUsername} --password-stdin https://gcr.io
