@@ -688,7 +688,7 @@ Resources:
                     local key=$GCR_REG_KEY
                     if [[ ${ContainerRegistry} == *"aws"* ]]; then
                         echo "(login): Logging in to AWS ECR..."
-                        eval $(aws ecr get-login-password --region ${AWS::Region})
+                        aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
                     elif [ -n "$key" ]; then
                         echo "(login): Logging in to GCR..."
                         echo "$key" | base64 --decode | docker login -u ${ContainerRegistryUsername} --password-stdin https://gcr.io
