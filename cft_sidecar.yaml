@@ -686,7 +686,7 @@ Resources:
                 function registry_login () {
                     echo "Container Registry Login..."
                     local key=$GCR_REG_KEY
-                    if [[ ${ContainerRegistry} == *"aws"* ]]; then
+                    if [[ ${ContainerRegistry} == *"amazonaws"* ]]; then
                         echo "(login): Logging in to AWS ECR..."
                         aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
                     elif [ -n "$key" ]; then
