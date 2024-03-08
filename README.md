@@ -102,6 +102,30 @@ allowed inbound rules in the databases' security groups. If the databases do not
 analyze what is the proper networking configuration to allow connectivity from the EC2
 instances to the protected databases.
 
+#### Enable the S3 File Browser
+
+To configure the sidecar to work on the S3 File Browser, set the following parameters in your CloudFormation stack:
+
+  - `SidecarDNSName`: Add the sidecar custom CNAME.
+  - `SidecarDNSHostedZoneId`: Add the Route53 hosted zone ID.
+    - If `SidecarDNSHostedZoneId` is omitted, the `SidecarDNSName` won’t
+      be automatically created, and the sidecar alias will need to be
+      created after the deployment: Add a CNAME or A record for the
+      sidecar.
+  - `LoadBalancerCertificateArn`: Add the ARN of the TLS certificate in
+    AWS Certificate Manager.
+  - `LoadBalancerTLSPorts`: Add 443 to the list.
+
+For sidecars with support for S3, it is also necessary to
+attach the list of IAM Policies giving the sidecar all the required
+permissions to assume IAM roles used to communicate to S3.
+
+All the CloudFormation parameters used above are documented in the 
+[Cyral sidecar CloudFormation module for AWS EC2](https://github.com/cyralinc/sidecar-cloudformation-ec2/). 
+For more details about the S3 File Browser configuration, check the 
+[Enable the S3 File Browser](https://cyral.com/docs/how-to/enable-s3-browser) 
+documentation.
+
 ### Parameters
 
 See the full list of parameters in the parameters section of the [deployment template](./cft_sidecar.yaml).
