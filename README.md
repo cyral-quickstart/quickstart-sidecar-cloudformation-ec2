@@ -110,8 +110,7 @@ To configure the sidecar to work on the S3 File Browser, set the following param
   - `SidecarDNSHostedZoneId`: Add the Route53 hosted zone ID.
     - If `SidecarDNSHostedZoneId` is omitted, the `SidecarDNSName` won’t
       be automatically created, and the sidecar alias will need to be
-      created after the deployment: Add a CNAME or A record for the
-      sidecar.
+      created after the deployment: See [Add a CNAME or A record for the sidecar](https://cyral.com/docs/sidecars/manage/alias).
   - `LoadBalancerCertificateArn`: Add the ARN of the TLS certificate in
     AWS Certificate Manager.
   - `LoadBalancerTLSPorts`: Add 443 to the list.
