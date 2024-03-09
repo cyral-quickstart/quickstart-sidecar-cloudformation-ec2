@@ -107,13 +107,8 @@ instances to the protected databases.
 To configure the sidecar to work on the S3 File Browser, set the following parameters in your CloudFormation stack:
 
   - `SidecarDNSName`: Add the sidecar custom CNAME.
-  - `SidecarDNSHostedZoneId`: Add the Route53 hosted zone ID.
-    - If `SidecarDNSHostedZoneId` is omitted, the `SidecarDNSName` won’t
-      be automatically created, and the sidecar alias will need to be
-      created after the deployment: See [Add a CNAME or A record for the sidecar](https://cyral.com/docs/sidecars/manage/alias).
   - `LoadBalancerCertificateArn`: Add the ARN of the TLS certificate in
     AWS Certificate Manager.
-  - `LoadBalancerTLSPorts`: Add 443 to the list.
 
 For sidecars with support for S3, it is also necessary to
 attach the list of IAM Policies giving the sidecar all the required
