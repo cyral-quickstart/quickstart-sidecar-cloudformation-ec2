@@ -127,6 +127,6 @@ Learn more in the [sidecar upgrade procedures](https://cyral.com/docs/sidecars/m
 
 Instructions for advanced configurations are available for the following topics:
 
+* [Enable the S3 File Browser](./docs/s3-browser.md)
 * [Sidecar certificates](./docs/certificates.md)
 * [Sidecar instance metrics](./docs/metrics.md)
-* [Enable the S3 File Browser](./docs/s3-browser.md)
