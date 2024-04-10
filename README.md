@@ -16,7 +16,7 @@ The elements shown in the architecture diagram above are deployed by the [Cyral 
 
 * EC2
     * Auto scaling group (responsible for managing EC2 instances and EBS volumes)
-    * Network load balancer
+    * Network load balancer (optional)
     * Security group
 * Secrets Manager
     * Sidecar credentials
@@ -25,7 +25,7 @@ The elements shown in the architecture diagram above are deployed by the [Cyral 
 * IAM
     * Sidecar role
 * Cloudwatch
-    * Log group (optionally created)
+    * Log group (optional)
 
 ### Requirements
 
@@ -47,18 +47,16 @@ The elements shown in the architecture diagram above are deployed by the [Cyral 
     * Fill the parameters `VpcId` and `Subnets` with an existing VPC and subnets that allows 
     network connectivity with the Cyral control plane (outbound HTTPS and gRPC traffic using port `443`)
     and with the database you plan to protect with this sidecar.
-    * Set parameters `AssociatePublicIpAddress=true` and `LoadBalancerScheme='internet-facing'`
-    to deploy a public sidecar.
+    * Set parameter `DeployLoadBalancer=false` to deploy a single sidecar instance without a load balancer.
+    * If you provided private subnets, set this to `AssociatePublicIpAddress=false`, otherwise set
+    `AssociatePublicIpAddress=true`.
     * Click `Next`, follow the remaining steps of the wizard acknowledging the capabilities requested and confirm the stack creation.
 
 This quick start will create the simplest configuration possible on your AWS account
-and deploy a single sidecar instance behind the load balancer. As this is just an example
-to help you understand basic concepts, it deploys a public sidecar instance with an
-internet-facing load balancer.
+and deploy a single sidecar instance without load balancer.
 
-Deploying a test sidecar in a public configuration is the easiest way to have all the components
-in place and understand the basic concepts of our product as a public sidecar will easily
-communicate with the SaaS control plane.
+Deploying a test sidecar is the easiest way to have a sidecar up and running to
+understand the basic concepts of our product.
 
 In case the databases you are protecting with the Cyral sidecar also live on AWS, make sure to
 add the sidecar security group (see output parameter `SidecarSecurityGroupID`) to the list of
@@ -80,8 +78,8 @@ instances to the protected databases.
     * Fill the parameters `VpcId` and `Subnets` with an existing VPC and subnets that allows 
     network connectivity to the Cyral control plane (outbound HTTPS and gRPC traffic using port `443`)
     and to the database you plan to protect with this sidecar.
-    * Set `AssociatePublicIpAddress=false`, `LoadBalancerScheme='internal'`, `AsgMin=1`, `AsgMax=4`, 
-    `AsgDesired=2`, and `EnableCrossZoneLoadBalancing=true`.
+    * Set `AssociatePublicIpAddress=false`, `DeployLoadBalancer=true`, `LoadBalancerScheme='internal'`, 
+    `AsgMin=1`, `AsgMax=4`, `AsgDesired=2`, and `EnableCrossZoneLoadBalancing=true`.
     * (Optional) Configure the Sidecar certificates in accordance with your deployment decision.
     * Click `Next`, follow the remaining steps of the wizard acknowledging the capabilities requested and confirm the stack creation.
 
