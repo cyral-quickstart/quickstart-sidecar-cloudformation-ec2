@@ -835,7 +835,6 @@ Resources:
                 AWS_ACCOUNT_ID=${AWS::AccountId}
                 INSTANCE_ID=$INSTANCE_ID
                 LOG_GROUP_NAME=${log_group}
-                LOCATION_BASED_POLICY_EVAL=false
                 NGINX_RESOLVER=$NGINX_RESOLVER
                 SECRETS_LOCATION=${secrets_location}
                 TLS_SKIP_VERIFY=${tls_skip_verify}
