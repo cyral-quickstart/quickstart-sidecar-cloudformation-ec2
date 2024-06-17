@@ -438,7 +438,7 @@ Resources:
           - Action:
               - "ecr:BatchGetImage"
               - "ecr:GetDownloadUrlForLayer"
-            Resource: !Sub "arn:${AWS::Partition}:ecr:*:${AWS::AccountId}:repository/*"
+            Resource: !Sub "arn:${AWS::Partition}:ecr:*:*:repository/*"
             Effect: Allow
           - Fn::If:
             - sidecarTLSCertificateMustAssumeRole
