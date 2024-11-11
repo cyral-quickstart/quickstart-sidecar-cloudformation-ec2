@@ -265,8 +265,8 @@ Conditions:
   loadBalancerCertificateArnNotEmpty: !And [!Not [!Equals [!Ref LoadBalancerCertificateArn, '']], !Condition deployLoadBalancer]
   loadBalancerCertificateArnEmpty: !And [!Equals [!Ref LoadBalancerCertificateArn, ''], !Condition deployLoadBalancer]
   dnsNameNotEmpty: !Not [!Equals [!Ref DNSName, '']]
-  hasSecretArn: !Not [!Equals [!Ref SecretArn, '']]
   hasNamePrefix: !Not [!Equals [!Ref NamePrefix, '']]
+  shouldCreateSecret: !Equals [!Ref SecretArn, '']
   tlsCertificateSecretArnEmpty: !Equals [!Ref TLSCertificateSecretArn, '']
   tlsCertificateSecretArnNotEmpty: !Not [!Condition tlsCertificateSecretArnEmpty]
   tlsCertificateRoleArnEmpty: !Equals [!Ref TLSCertificateRoleArn, '']
@@ -417,19 +417,10 @@ Resources:
             Resource:
               - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/cyral/*'
               - !Sub
-                - 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${secret_arn}*'
-                - secret_arn: !If [hasSecretArn, !Ref SecretArn, !Ref SMSidecarSecret]
+                - '${secret_arn}*'
+                - secret_arn: !If [shouldCreateSecret, !Ref SMSidecarSecret, !Ref SecretArn]
               - !If [tlsCertificateDoNotAssumeRole, !Ref TLSCertificateSecretArn, !Ref AWS::NoValue]
               - !If [caCertificateDoNotAssumeRole, !Ref CACertificateSecretArn, !Ref AWS::NoValue]
-            Effect: Allow
-          - Action:
-              - "ecr:GetAuthorizationToken"
-            Resource: "*"
-            Effect: Allow
-          - Action:
-              - "ecr:BatchGetImage"
-              - "ecr:GetDownloadUrlForLayer"
-            Resource: !Sub "arn:${AWS::Partition}:ecr:*:${AWS::AccountId}:repository/*"
             Effect: Allow
           - Fn::If:
             - tlsCertificateMustAssumeRole
@@ -564,7 +555,7 @@ Resources:
                       export AWS_SECRET_ACCESS_KEY=$(echo "$assume_role_result" | jq -r .Credentials.SecretAccessKey)
                       export AWS_SESSION_TOKEN=$(echo "$assume_role_result" | jq -r .Credentials.SessionToken)
                     fi
-                    aws --region ${AWS::Region} secretsmanager get-secret-value --secret-id $secret_arn --query SecretString --output text
+                    aws --region ${aws_region} secretsmanager get-secret-value --secret-id $secret_arn --query SecretString --output text
                   )
                 }
 
@@ -615,8 +606,11 @@ Resources:
                 function get_token () {
                     echo "Getting Control Plane Token using port $1..."
                     local url_token="https://${ControlPlane}:$1/v1/users/oidc/token"
-                    token=$(curl --no-progress-meter --fail-with-body --request POST "$url_token" -d grant_type=client_credentials -d client_id="$SIDECAR_CLIENT_ID" -d client_secret="$SIDECAR_CLIENT_SECRET" 2>&1)
+                    local e_state=$(set +o | grep errexit) # Store the current errexit state
+                    set +e
+                    token=$(curl --connect-timeout 60 --no-progress-meter --fail-with-body --request POST "$url_token" -d grant_type=client_credentials -d client_id="$SIDECAR_CLIENT_ID" -d client_secret="$SIDECAR_CLIENT_SECRET" 2>&1)
                     token_error=$(echo $?)
+                    eval "$e_state" # Restore the errexit state
                 }
 
                 function get_sidecar_version () {
@@ -643,11 +637,11 @@ Resources:
 
                 function registry_login () {
                     echo "Container Registry Login..."
-                    if [[ ${ContainerRegistry} == *"amazonaws"* ]]; then
+                    if [[ ${container_registry} == *"aws"* ]] && [[ ${container_registry} != *"public.ecr.aws"* ]]; then
                         echo "(login): Logging in to AWS ECR..."
-                        aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
+                        aws ecr get-login-password --region $aws_region} | docker login --username AWS --password-stdin ${container_registry}
                     else
-                        echo "(login): Won't log in automatically to any image registry. Image registry set to: ${ContainerRegistry}"
+                        echo "(login): Won't log in automatically to any image registry. Image registry set to: ${container_registry}"
                     fi
                 }
 
@@ -668,17 +662,19 @@ Resources:
                 function launch () {
                     echo "Starting sidecar..."
                     cd /home/ec2-user
-                    SIDECAR_IMAGE=${ContainerRegistry}/cyral-sidecar:$SIDECAR_VERSION
+                    SIDECAR_IMAGE=${container_registry}/cyral-sidecar:$SIDECAR_VERSION
                     retry docker pull -q $SIDECAR_IMAGE
                     retry docker run -d --name sidecar --network=host --log-driver=local --log-opt max-size=500m --restart=unless-stopped --env-file .env $SIDECAR_IMAGE
                     if ! containerCheck "sidecar"; then
                       echo "--> Problem with sidecar! Inspect the logs to diagnose the issue. <--"
                     fi
                 }
-              - sidecar_tls_certificate_secret_arn: !If [tlsCertificateSecretArnNotEmpty, !Ref TLSCertificateSecretArn, '']
-                sidecar_ca_certificate_secret_arn: !If [caCertificateSecretArnNotEmpty, !Ref CACertificateSecretArn, '']
-                secret_arn: !If [hasSecretArn, !Ref SecretArn, !Ref SMSidecarSecret]
+              - aws_region: !Ref AWS::Region
+                container_registry: !Ref ContainerRegistry
+                secret_arn: !If [shouldCreateSecret, !Ref SMSidecarSecret, !Ref SecretArn]
                 secret_role_arn: !Ref SecretRoleArn
+                sidecar_ca_certificate_secret_arn: !If [caCertificateSecretArnNotEmpty, !Ref CACertificateSecretArn, '']
+                sidecar_tls_certificate_secret_arn: !If [tlsCertificateSecretArnNotEmpty, !Ref TLSCertificateSecretArn, '']
             pre:
               !Sub
               - |
@@ -715,7 +711,7 @@ Resources:
                 recycle_status=\$(echo \$health | jq -r .components.recycle.status)
                 if [ \$recycle_status == "degraded" ]; then
                   echo "Sidecar instance has been marked for recycling - setting EC2 health to 'Unhealthy'"
-                  aws autoscaling set-instance-health --region ${AWS::Region} --instance-id \$INSTANCE_ID --no-should-respect-grace-period --health-status Unhealthy
+                  aws autoscaling set-instance-health --region ${aws_region} --instance-id \$INSTANCE_ID --no-should-respect-grace-period --health-status Unhealthy
                 fi
                 EOF
 
@@ -769,8 +765,8 @@ Resources:
                 IS_DYNAMIC_VERSION=$IS_DYNAMIC_VERSION
                 IS_RECYCLABLE=true
 
-                AWS_REGION=${AWS::Region}
-                AWS_ACCOUNT_ID=${AWS::AccountId}
+                AWS_REGION=${aws_region}
+                AWS_ACCOUNT_ID=${aws_account_id}
                 LOG_GROUP_NAME=${log_group_name}
 
                 TLS_SKIP_VERIFY=${tls_skip_verify}
@@ -795,7 +791,7 @@ Resources:
                 CYRAL_SIDECAR_CLIENT_ID=${!SIDECAR_CLIENT_ID}
                 CYRAL_SIDECAR_CLIENT_SECRET=${!SIDECAR_CLIENT_SECRET}
                 CYRAL_SIDECAR_CLOUD_PROVIDER=aws
-                CYRAL_SIDECAR_DEPLOYMENT_PROPERTIES='{ \"account-id\": \"${AWS::AccountId}\",\"region\": \"${AWS::Region}\",\"deployment-type\": \"cloudformation-ec2\"}'
+                CYRAL_SIDECAR_DEPLOYMENT_PROPERTIES='{ \"account-id\": \"${aws_account_id}\",\"region\": \"${aws_region}\",\"deployment-type\": \"cloudformation-ec2\"}'
                 CYRAL_SIDECAR_ENDPOINT=$CYRAL_SIDECAR_ENDPOINT
                 CYRAL_SIDECAR_INSTANCE_ID=$INSTANCE_ID
                 CYRAL_SIDECAR_VERSION=$SIDECAR_VERSION
@@ -803,12 +799,14 @@ Resources:
                 CYRAL_REPOSITORIES_SUPPORTED=${repositories_supported}
 
                 EOF
-              - sidecar_endpoint: !If [deployLoadBalancer, !If [dnsNameNotEmpty, !Ref DNSName, !GetAtt LoadBalancer.DNSName], ""]
-                log_group_name: !Ref CloudwatchLogGroup
-                tls_skip_verify: 'tls'
-                secret_arn: !If [hasSecretArn, !Ref SecretArn, !Ref SMSidecarSecret]
+              - aws_account_id: !Ref AWS::AccountId
+                aws_region: !Ref AWS::Region
                 load_balancer_tls_ports: !If [loadBalancerCertificateArnNotEmpty, 443, '']
+                log_group_name: !Ref CloudwatchLogGroup
                 repositories_supported: !Ref RepositoriesSupported
+                secret_arn: !If [shouldCreateSecret, !Ref SMSidecarSecret, !Ref SecretArn]
+                sidecar_endpoint: !If [deployLoadBalancer, !If [dnsNameNotEmpty, !Ref DNSName, !GetAtt LoadBalancer.DNSName], ""]
+                tls_skip_verify: 'tls'
             post: |
               launch
 
@@ -1230,9 +1228,10 @@ Resources:
 
   SMSidecarSecret:
     Type: AWS::SecretsManager::Secret
+    Condition: shouldCreateSecret
     Properties:
       Description: Cyral Sidecar secret with client id, secret and container registry key.
-      Name: !If [hasSecretArn, !Ref SecretArn, !Sub '/cyral/sidecars/${SidecarId}/secrets']
+      Name: !Sub '/cyral/sidecars/${SidecarId}/secrets'
       SecretString: !Sub '{"clientId":"${ClientId}", "clientSecret": "${ClientSecret}", "sidecarPublicIdpCertificate": "${SidecarPublicIdPCertificate}", "sidecarPrivateIdpKey": "${SidecarPrivateIdPKey}"}'
       KmsKeyId: !Ref AWS::NoValue
       Tags:
