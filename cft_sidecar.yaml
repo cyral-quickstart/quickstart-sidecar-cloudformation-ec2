@@ -1244,15 +1244,15 @@ Resources:
           - !Ref AWS::NoValue
 
 Outputs:
-  SidecarDNS:
+  DNS:
     Description: Sidecar DNS name
     Value: !If [deployLoadBalancer, !GetAtt LoadBalancer.DNSName, "NA"]
 
-  SidecarLoadBalancerDNS:
+  LoadBalancerDNS:
     Description: Sidecar load balancer DNS name
     Value: !If [deployLoadBalancer, !GetAtt LoadBalancer.DNSName, "NA"]
 
-  SidecarSecurityGroupID:
+  SecurityGroupID:
     Description: Sidecar security group id
     Value: !Ref SidecarSecurityGroup
 

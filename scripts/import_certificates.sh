@@ -105,8 +105,8 @@ fi
 check_for_secrets $AWS_DEFAULT_REGION $SIDECAR_ID
 
 # Create the Secrets in AWS
-SidecarCreatedCertificateSecretArn=$(create_secret "/cyral/sidecars/$SIDECAR_ID/self-signed-certificate" 'TLS certificate needed by the sidecar to terminate TLS connections' $AWS_DEFAULT_REGION)
-SidecarCACertificateSecretArn=$(create_secret "/cyral/sidecars/$SIDECAR_ID/ca-certificate" 'TLS certificate needed by the sidecar to terminate TLS connections' $AWS_DEFAULT_REGION)
+TLSCertificateSecretArn=$(create_secret "/cyral/sidecars/$SIDECAR_ID/self-signed-certificate" 'TLS certificate needed by the sidecar to terminate TLS connections' $AWS_DEFAULT_REGION)
+CACertificateSecretArn=$(create_secret "/cyral/sidecars/$SIDECAR_ID/ca-certificate" 'TLS certificate needed by the sidecar to terminate TLS connections' $AWS_DEFAULT_REGION)
 
 # Generate certificates and store them in the secret
-import_certificates $SIDECAR_NAME $SidecarCreatedCertificateSecretArn $SidecarCACertificateSecretArn $aws_region
+import_certificates $SIDECAR_NAME $TLSCertificateSecretArn $CACertificateSecretArn $aws_region

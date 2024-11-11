@@ -2,7 +2,7 @@
 
 To configure the sidecar to work on the S3 File Browser, set the following parameters in your CloudFormation stack:
 
-  - `SidecarDNSName`: Add the sidecar custom CNAME.
+  - `DNSName`: Add the sidecar custom CNAME.
   - `LoadBalancerCertificateArn`: Add the ARN of the TLS certificate in
     AWS Certificate Manager.
 
