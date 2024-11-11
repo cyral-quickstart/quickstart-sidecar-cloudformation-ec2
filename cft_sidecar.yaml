@@ -586,8 +586,9 @@ Resources:
 
                 function load_idp_certs() {
                     echo "Loading IDP certificates..."
-                    SIDECAR_IDP_PUBLIC_CERT="$(echo "$secret" | jq -r .sidecarPublicIdpCertificate)"
-                    SIDECAR_IDP_PRIVATE_KEY="$(echo "$secret" | jq -r .sidecarPrivateIdpKey)"
+                    IDP_CERTIFICATE=$(echo "$secret" | jq -r 'select(.idpCertificate != null) | .idpCertificate')
+                    SIDECAR_IDP_PUBLIC_CERT=$(echo "$secret" | jq -r 'select(.sidecarPublicIdpCertificate != null) | .sidecarPublicIdpCertificate')
+                    SIDECAR_IDP_PRIVATE_KEY=$(echo "$secret" | jq -r 'select(.sidecarPrivateIdpKey != null) | .sidecarPrivateIdpKey')
                 }
 
                 function fetch_hostname() {
@@ -771,7 +772,7 @@ Resources:
 
                 TLS_SKIP_VERIFY=${tls_skip_verify}
 
-                CYRAL_IDP_CERTIFICATE=${IdPCertificate}
+                CYRAL_IDP_CERTIFICATE=${!IDP_CERTIFICATE}
                 CYRAL_NGINX_RESOLVER=$NGINX_RESOLVER
                 CYRAL_SSO_LOGIN_URL=${IdPSSOLoginURL}
 
@@ -1232,7 +1233,7 @@ Resources:
     Properties:
       Description: Cyral Sidecar secret with client id, secret and container registry key.
       Name: !Sub '/cyral/sidecars/${SidecarId}/secrets'
-      SecretString: !Sub '{"clientId":"${ClientId}", "clientSecret": "${ClientSecret}", "sidecarPublicIdpCertificate": "${SidecarPublicIdPCertificate}", "sidecarPrivateIdpKey": "${SidecarPrivateIdPKey}"}'
+      SecretString: !Sub '{"clientId":"${ClientId}", "clientSecret": "${ClientSecret}", "sidecarPublicIdpCertificate": "${SidecarPublicIdPCertificate}", "sidecarPrivateIdpKey": "${SidecarPrivateIdPKey}", "idpCertificate": "${IdPCertificate}"}'
       KmsKeyId: !Ref AWS::NoValue
       Tags:
         - Key: "Stack"
