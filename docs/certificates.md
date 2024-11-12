@@ -116,7 +116,7 @@ This script expects a few environment variables to be set:
 
 * `AWS_DEFAULT_REGION` : This should be set to the same region where you plan to deploy your sidecar
 * `SIDECAR_ID` : This should be set to the same value you use for the `SidecarId` parameter of this [Cloudformation](../cft_sidecar.yaml) template
-* `SIDECAR_NAME` : (Optional) This should be set to the same value you use for the `DNSName` parameter of this [Cloudformation](../cft_sidecar.yaml) template. If this is not set, then the default hostname of `sidecar.cyral.app.com` will be used for the domain name on the certificates.
+* `SIDECAR_NAME` : (Optional) This should be set to the same value you use for the `DNSName` parameter of this [Cloudformation](../cft_sidecar.yaml) template. If this is not set, then the default hostname of `sidecar.app.cyral.com` will be used for the domain name on the certificates.
 
 ### Required commands
 
