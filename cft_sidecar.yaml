@@ -231,6 +231,7 @@ Parameters:
   NamePrefix:
     Type: String
     Description: "Prefix for names of the AWS resources created. Maximum length is 24 characters."
+    Default: ""
 
   IAMPolicies:
     Type: CommaDelimitedList
