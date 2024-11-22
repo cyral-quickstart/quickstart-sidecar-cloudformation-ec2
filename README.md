@@ -59,7 +59,7 @@ Deploying a test sidecar is the easiest way to have a sidecar up and running to
 understand the basic concepts of our product.
 
 In case the databases you are protecting with the Cyral sidecar also live on AWS, make sure to
-add the sidecar security group (see output parameter `SidecarSecurityGroupID`) to the list of
+add the sidecar security group (see output parameter `SecurityGroupID`) to the list of
 allowed inbound rules in the databases' security groups. If the databases do not live on AWS,
 analyze what is the proper networking configuration to allow connectivity from the EC2
 instances to the protected databases.
@@ -95,7 +95,7 @@ In order to properly secure your sidecar, define appropriate inbound CIDRs using
 variables documentation in the downloaded file for more information.
 
 In case the databases you are protecting with the Cyral sidecar also live on AWS, make sure to
-add the sidecar security group (see output parameter `SidecarSecurityGroupID`) to the list of
+add the sidecar security group (see output parameter `SecurityGroupID`) to the list of
 allowed inbound rules in the databases' security groups. If the databases do not live on AWS,
 analyze what is the proper networking configuration to allow connectivity from the EC2
 instances to the protected databases.
@@ -125,6 +125,7 @@ Learn more in the [sidecar upgrade procedures](https://cyral.com/docs/sidecars/m
 
 Instructions for advanced configurations are available for the following topics:
 
+* [Bring your own secret](./docs/byos.md)
 * [Enable the S3 File Browser](./docs/s3-browser.md)
 * [Sidecar certificates](./docs/certificates.md)
 * [Sidecar instance metrics](./docs/metrics.md)

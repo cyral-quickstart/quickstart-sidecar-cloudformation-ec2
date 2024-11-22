@@ -25,19 +25,18 @@ Metadata:
       - SidecarInstanceType
       - AmiId
       - LoadBalancerCertificateArn
-      - SidecarDNSName
+      - DNSName
       - LoadBalancerScheme
       - AssociatePublicIpAddress
       - ContainerRegistry
-      - ContainerRegistryUsername
-      - ContainerRegistryKey
-      - SecretsLocation
-      - SidecarTLSCertificateRoleArn
-      - SidecarCACertificateRoleArn
-      - SidecarTLSCertificateSecretArn
-      - SidecarCACertificateSecretArn
-      - UseSingleContainer
+      - SecretArn
+      - SecretRoleArn
+      - CACertificateRoleArn
+      - CACertificateSecretArn
+      - TLSCertificateRoleArn
+      - TLSCertificateSecretArn
       - IAMPolicies
+      - RepositoriesSupported
     - Label:
         default: 'High Availability'
       Parameters:
@@ -67,13 +66,13 @@ Parameters:
     Default: false
     ConstraintDescription: must specify 'true' or 'false'.
 
-  SidecarTLSCertificateRoleArn:
+  TLSCertificateRoleArn:
     Description: "(Optional) ARN of an AWS IAM Role to assume when reading the TLS certificate."
     Type: String
     Default: ""
     AllowedPattern: "^(|arn:.+)$"
 
-  SidecarCACertificateRoleArn:
+  CACertificateRoleArn:
     Description: "(Optional) ARN of an AWS IAM Role to assume when reading the CA certificate."
     Type: String
     Default: ""
@@ -85,18 +84,7 @@ Parameters:
     AllowedPattern: ".+"
     Default: "public.ecr.aws/cyral"
 
-  ContainerRegistryUsername:
-    Description: "Username to authenticate to the container registry."
-    Type: String
-    Default: ""
-
-  ContainerRegistryKey:
-    NoEcho: true
-    Description: "Corresponding key for the user name provided to authenticate to the container registry."
-    Type: String
-    Default: ""
-
-  SidecarDNSName:
+  DNSName:
     Description: "(Optional) Fully qualified domain name that will be automatically created/updated to reference the sidecar LB"
     Type: String
     Default: ""
@@ -133,12 +121,12 @@ Parameters:
     Description: (Optional) ARN of SSL certificate that will be used for client connections to Snowflake or S3 Browser.
     Default: ""
 
-  SidecarTLSCertificateSecretArn:
+  TLSCertificateSecretArn:
     Type: String
     Description: (Optional) ARN of TLS certificate needed by the sidecar to terminate TLS connections.
     Default: ""
 
-  SidecarCACertificateSecretArn:
+  CACertificateSecretArn:
     Type: String
     Description: (Optional) ARN of CA certificate needed by the sidecar to sign proxied TLS connections.
     Default: ""
@@ -150,8 +138,13 @@ Parameters:
     Default: 'internal'
     ConstraintDescription: must specify 'internal' or 'internet-facing'.
 
-  SecretsLocation:
-    Description: "(Optional) Location in AWS Secrets Manager to store `SidecarClientID`, `SidecarClientSecret` and `ContainerRegistryKey`. If unset, will assume `/cyral/sidecars/<SIDECAR_ID>/secrets`."
+  SecretArn:
+    Description: "(Optional) ARN of the secret with the credentials used by the sidecar."
+    Type: String
+    Default: ""
+
+  SecretRoleArn:
+    Description: "(Optional) ARN of an AWS IAM Role to assume when reading the secret informed in `SecretArn`."
     Type: String
     Default: ""
 
@@ -231,26 +224,24 @@ Parameters:
 
   CustomTag:
     Type: String
-    Description: (Optional) Custom tag to be added in the sidecar resources. Ex:"key=value".
+    Description: "(Optional) Custom tag to be added in the sidecar resources. Ex: \"key=value\"."
     Default: ""
     AllowedPattern: "^([0-9a-zA-Z]+=[0-9a-zA-Z]+|)$"
 
   NamePrefix:
     Type: String
     Description: "Prefix for names of the AWS resources created. Maximum length is 24 characters."
-
-  UseSingleContainer:
-    Description: "Use single container for sidecar deployment"
-    Type: "String"
-    Default: "false"
-    AllowedValues:
-      - "true"
-      - "false"
+    Default: ""
 
   IAMPolicies:
     Type: CommaDelimitedList
-    Description: (Optional) List of IAM policies ARNs that will be attached to the sidecar IAM role (Comma Delimited List)
+    Description: "(Optional) List of IAM policies ARNs that will be attached to the sidecar IAM role (Comma Delimited List)"
     Default: ""
+
+  RepositoriesSupported:
+    Type: String
+    Description: "List of all repositories that will be supported by the sidecar (lower case only)"
+    Default: "denodo,dremio,dynamodb,mongodb,mysql,oracle,postgresql,redshift,snowflake,sqlserver,s3"
 
   CustomUserDataPre:
     Type: String
@@ -274,35 +265,36 @@ Conditions:
   mustAttachIAMPolicies: !Not [!Equals [!Join ["", !Ref IAMPolicies], ""]]
   loadBalancerCertificateArnNotEmpty: !And [!Not [!Equals [!Ref LoadBalancerCertificateArn, '']], !Condition deployLoadBalancer]
   loadBalancerCertificateArnEmpty: !And [!Equals [!Ref LoadBalancerCertificateArn, ''], !Condition deployLoadBalancer]
-  sidecarDNSNameNotEmpty: !Not [!Equals [!Ref SidecarDNSName, '']]
-  hasSecretsLocation: !Not [!Equals [!Ref SecretsLocation, '']]
-  sidecarTLSCertificateSecretArnEmpty: !Equals [!Ref SidecarTLSCertificateSecretArn, '']
-  sidecarTLSCertificateSecretArnNotEmpty: !Not [!Condition sidecarTLSCertificateSecretArnEmpty]
-  sidecarTLSCertificateRoleArnEmpty: !Equals [!Ref SidecarTLSCertificateRoleArn, '']
-  sidecarTLSCertificateRoleArnNotEmpty: !Not [!Condition sidecarTLSCertificateRoleArnEmpty]
-  sidecarTLSCertificateDoNotAssumeRole: !And
-    - !Condition sidecarTLSCertificateSecretArnNotEmpty
-    - !Condition sidecarTLSCertificateRoleArnEmpty
-  sidecarTLSCertificateMustAssumeRole: !And
-    - !Condition sidecarTLSCertificateSecretArnNotEmpty
-    - !Condition sidecarTLSCertificateRoleArnNotEmpty
+  dnsNameNotEmpty: !Not [!Equals [!Ref DNSName, '']]
+  hasNamePrefix: !Not [!Equals [!Ref NamePrefix, '']]
+  shouldCreateSecret: !Equals [!Ref SecretArn, '']
+  tlsCertificateSecretArnEmpty: !Equals [!Ref TLSCertificateSecretArn, '']
+  tlsCertificateSecretArnNotEmpty: !Not [!Condition tlsCertificateSecretArnEmpty]
+  tlsCertificateRoleArnEmpty: !Equals [!Ref TLSCertificateRoleArn, '']
+  tlsCertificateRoleArnNotEmpty: !Not [!Condition tlsCertificateRoleArnEmpty]
+  tlsCertificateDoNotAssumeRole: !And
+    - !Condition tlsCertificateSecretArnNotEmpty
+    - !Condition tlsCertificateRoleArnEmpty
+  tlsCertificateMustAssumeRole: !And
+    - !Condition tlsCertificateSecretArnNotEmpty
+    - !Condition tlsCertificateRoleArnNotEmpty
 
-  sidecarCACertificateSecretArnEmpty: !Equals [!Ref SidecarCACertificateSecretArn, '']
-  sidecarCACertificateSecretArnNotEmpty: !Not [!Condition sidecarCACertificateSecretArnEmpty]
-  sidecarCACertificateRoleArnEmpty: !Equals [!Ref SidecarCACertificateRoleArn, '']
-  sidecarCACertificateRoleArnNotEmpty: !Not [!Condition sidecarCACertificateRoleArnEmpty]
-  sidecarCACertificateDoNotAssumeRole: !And
-    - !Condition sidecarCACertificateSecretArnNotEmpty
-    - !Condition sidecarCACertificateRoleArnEmpty
-  sidecarCACertificateMustAssumeRole: !And
-    - !Condition sidecarCACertificateSecretArnNotEmpty
-    - !Condition sidecarCACertificateRoleArnNotEmpty
+  caCertificateSecretArnEmpty: !Equals [!Ref CACertificateSecretArn, '']
+  caCertificateSecretArnNotEmpty: !Not [!Condition caCertificateSecretArnEmpty]
+  caCertificateRoleArnEmpty: !Equals [!Ref CACertificateRoleArn, '']
+  caCertificateRoleArnNotEmpty: !Not [!Condition caCertificateRoleArnEmpty]
+  caCertificateDoNotAssumeRole: !And
+    - !Condition caCertificateSecretArnNotEmpty
+    - !Condition caCertificateRoleArnEmpty
+  caCertificateMustAssumeRole: !And
+    - !Condition caCertificateSecretArnNotEmpty
+    - !Condition caCertificateRoleArnNotEmpty
 
 Resources:
   CloudwatchLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Ref NamePrefix
+      LogGroupName: !If [hasNamePrefix, !Join ["-", ["cyral", !Ref NamePrefix]], "cyral-sidecar"]
       RetentionInDays: 14
       Tags:
         - Key: "Stack"
@@ -358,7 +350,7 @@ Resources:
             - "GroupTotalInstances"
       Tags:
         - Key: "Name"
-          Value: !Join ["-", [!Ref NamePrefix, "sidecar"]]
+          Value: !If [hasNamePrefix, !Join ["-", ["cyral", !Ref NamePrefix]], "cyral"]
           PropagateAtLaunch: true
         - Key: "SidecarVersion"
           Value: !Ref SidecarVersion
@@ -426,33 +418,24 @@ Resources:
             Resource:
               - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/cyral/*'
               - !Sub
-                - 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${secrets_location}*'
-                - secrets_location: !If [hasSecretsLocation, !Ref SecretsLocation, !Sub '/cyral/sidecars/${SidecarId}/secrets']
-              - !If [sidecarTLSCertificateDoNotAssumeRole, !Ref SidecarTLSCertificateSecretArn, !Ref AWS::NoValue]
-              - !If [sidecarCACertificateDoNotAssumeRole, !Ref SidecarCACertificateSecretArn, !Ref AWS::NoValue]
-            Effect: Allow
-          - Action:
-              - "ecr:GetAuthorizationToken"
-            Resource: "*"
-            Effect: Allow
-          - Action:
-              - "ecr:BatchGetImage"
-              - "ecr:GetDownloadUrlForLayer"
-            Resource: !Sub "arn:${AWS::Partition}:ecr:*:${AWS::AccountId}:repository/*"
+                - '${secret_arn}*'
+                - secret_arn: !If [shouldCreateSecret, !Ref SMSidecarSecret, !Ref SecretArn]
+              - !If [tlsCertificateDoNotAssumeRole, !Ref TLSCertificateSecretArn, !Ref AWS::NoValue]
+              - !If [caCertificateDoNotAssumeRole, !Ref CACertificateSecretArn, !Ref AWS::NoValue]
             Effect: Allow
           - Fn::If:
-            - sidecarTLSCertificateMustAssumeRole
+            - tlsCertificateMustAssumeRole
             - Effect: Allow
               Action:
                 - sts:AssumeRole
-              Resource: !Ref SidecarTLSCertificateRoleArn
+              Resource: !Ref TLSCertificateRoleArn
             - !Ref AWS::NoValue
           - Fn::If:
-            - sidecarCACertificateMustAssumeRole
+            - caCertificateMustAssumeRole
             - Effect: Allow
               Action:
                 - sts:AssumeRole
-              Resource: !Ref SidecarCACertificateRoleArn
+              Resource: !Ref CACertificateRoleArn
             - !Ref AWS::NoValue
       Roles:
         - !Ref SidecarHostRole
@@ -506,13 +489,6 @@ Resources:
                     echo "Updating and installing packages..."
                     yum update -y
                     yum install -y aws-cfn-bootstrap wget ec2-instance-connect docker jq
-                }
-
-                function docker_compose_install(){
-                    # Compose Setup
-                    sudo mkdir -p /usr/local/lib/docker/cli-plugins/
-                    sudo curl -SsfL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
-                    sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
                 }
 
                 function docker_setup(){
@@ -580,29 +556,27 @@ Resources:
                       export AWS_SECRET_ACCESS_KEY=$(echo "$assume_role_result" | jq -r .Credentials.SecretAccessKey)
                       export AWS_SESSION_TOKEN=$(echo "$assume_role_result" | jq -r .Credentials.SessionToken)
                     fi
-                    aws --region ${AWS::Region} secretsmanager get-secret-value --secret-id $secret_arn --query SecretString --output text
+                    aws --region ${aws_region} secretsmanager get-secret-value --secret-id $secret_arn --query SecretString --output text
                   )
                 }
 
                 function get_secret(){
                     echo "Fetching Secret..."
-                    if ! secret=$(aws secretsmanager get-secret-value --secret-id "${secrets_location}" --query SecretString --output text --region "${AWS::Region}" 2>&1); then
-                        echo "Unable to fetch secret ${secrets_location}"
-                        echo "Error: $secret"
+                    if ! secret=$(get_secret_value "${secret_arn}" "${secret_role_arn}"); then
+                        echo "ERROR: Unable to fetch sidecar secrets from ${secret_arn} see error above"
                         exit 1
                     fi
                     SIDECAR_CLIENT_ID=$(echo "$secret" | jq -r .clientId)
                     SIDECAR_CLIENT_SECRET=$(echo "$secret" | jq -r .clientSecret)
-                    GCR_REG_KEY=$(echo "$secret" | jq -r .containerRegistryKey)
                 }
 
                 function load_certs() {
                     echo "Loading certificates..."
                     local sidecar_tls_cert_secret_value sidecar_ca_cert_secret_value
-                    if ! sidecar_tls_cert_secret_value=$(get_secret_value "${sidecar_tls_certificate_secret_arn}" "${SidecarTLSCertificateRoleArn}"); then
+                    if ! sidecar_tls_cert_secret_value=$(get_secret_value "${sidecar_tls_certificate_secret_arn}" "${TLSCertificateRoleArn}"); then
                       echo "WARNING: Unable to fetch shared TLS certificate from ${sidecar_tls_certificate_secret_arn} see error above"
                     fi
-                    if ! sidecar_ca_cert_secret_value=$(get_secret_value "${sidecar_ca_certificate_secret_arn}" "${SidecarCACertificateRoleArn}"); then
+                    if ! sidecar_ca_cert_secret_value=$(get_secret_value "${sidecar_ca_certificate_secret_arn}" "${CACertificateRoleArn}"); then
                       echo "WARNING: Unable to fetch shared CA certificate from ${sidecar_ca_certificate_secret_arn}" see error above.
                     fi
                     SIDECAR_TLS_KEY=$(echo "$sidecar_tls_cert_secret_value" | extract_key_from_json_input | base64 -w 0)
@@ -613,8 +587,9 @@ Resources:
 
                 function load_idp_certs() {
                     echo "Loading IDP certificates..."
-                    SIDECAR_IDP_PUBLIC_CERT="$(echo "$secret" | jq -r .sidecarPublicIdpCertificate)"
-                    SIDECAR_IDP_PRIVATE_KEY="$(echo "$secret" | jq -r .sidecarPrivateIdpKey)"
+                    IDP_CERTIFICATE=$(echo "$secret" | jq -r 'select(.idpCertificate != null) | .idpCertificate')
+                    SIDECAR_IDP_PUBLIC_CERT=$(echo "$secret" | jq -r 'select(.sidecarPublicIdpCertificate != null) | .sidecarPublicIdpCertificate')
+                    SIDECAR_IDP_PRIVATE_KEY=$(echo "$secret" | jq -r 'select(.sidecarPrivateIdpKey != null) | .sidecarPrivateIdpKey')
                 }
 
                 function fetch_hostname() {
@@ -633,8 +608,11 @@ Resources:
                 function get_token () {
                     echo "Getting Control Plane Token using port $1..."
                     local url_token="https://${ControlPlane}:$1/v1/users/oidc/token"
-                    token=$(curl --no-progress-meter --fail-with-body --request POST "$url_token" -d grant_type=client_credentials -d client_id="$SIDECAR_CLIENT_ID" -d client_secret="$SIDECAR_CLIENT_SECRET" 2>&1)
+                    local e_state=$(set +o | grep errexit) # Store the current errexit state
+                    set +e
+                    token=$(curl --connect-timeout 60 --no-progress-meter --fail-with-body --request POST "$url_token" -d grant_type=client_credentials -d client_id="$SIDECAR_CLIENT_ID" -d client_secret="$SIDECAR_CLIENT_SECRET" 2>&1)
                     token_error=$(echo $?)
+                    eval "$e_state" # Restore the errexit state
                 }
 
                 function get_sidecar_version () {
@@ -659,41 +637,13 @@ Resources:
                     SIDECAR_VERSION=$(echo "$resp" | jq -r '.sidecar.version // empty')
                 }
 
-                function download_sidecar () {
-                    local access_token url
-                    echo "Downloading Sidecar Compose File..."
-                    get_token "443"
-                    if [[ $token_error -ne 0 ]]; then
-                        error_443="$token"
-                        get_token "8000"
-                        if [[ $token_error -ne 0 ]]; then
-                            echo "Unable to retrieve token!!"
-                            echo "Attempt on 443: $error_443"
-                            echo "Attempt on 8000: $token"
-                            return 1
-                        fi
-                    fi
-                    access_token=$(echo "$token" | jq -r .access_token)
-                    url="https://${ControlPlane}/deploy/docker-compose?TemplateType=cloudformation&TemplateVersion=$SIDECAR_VERSION"
-                    echo "Trying to download the sidecar template from: $url"
-                    if ! curl -fsS --no-progress-meter -o /home/ec2-user/sidecar.compose.yaml -L "$url" -H "Authorization: Bearer $access_token" ; then
-                        echo "Unable to download compose file for version $SIDECAR_VERSION, please make sure all parameters are correct"
-                        return 1
-                    fi
-                    return 0
-                }
-
                 function registry_login () {
                     echo "Container Registry Login..."
-                    local key=$GCR_REG_KEY
-                    if [[ ${ContainerRegistry} == *"amazonaws"* ]]; then
+                    if [[ ${container_registry} == *"aws"* ]] && [[ ${container_registry} != *"public.ecr.aws"* ]]; then
                         echo "(login): Logging in to AWS ECR..."
-                        aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin ${ContainerRegistry}
-                    elif [ -n "$key" ]; then
-                        echo "(login): Logging in to GCR..."
-                        echo "$key" | base64 --decode | docker login -u ${ContainerRegistryUsername} --password-stdin https://gcr.io
+                        aws ecr get-login-password --region $aws_region} | docker login --username AWS --password-stdin ${container_registry}
                     else
-                        echo "(login): Won't log in automatically to any image registry. Image registry set to: ${ContainerRegistry}"
+                        echo "(login): Won't log in automatically to any image registry. Image registry set to: ${container_registry}"
                     fi
                 }
 
@@ -714,21 +664,19 @@ Resources:
                 function launch () {
                     echo "Starting sidecar..."
                     cd /home/ec2-user
-                    if [[ ${UseSingleContainer} == "true" ]]; then
-                      SINGLE_CONTAINER_IMAGE=${ContainerRegistry}/cyral-sidecar:$SIDECAR_VERSION
-                      retry docker pull -q $SINGLE_CONTAINER_IMAGE
-                      retry docker run -d --name sidecar --network=host --log-driver=local --log-opt max-size=500m --restart=unless-stopped --env-file .env $SINGLE_CONTAINER_IMAGE
-                      if ! containerCheck "sidecar"; then
-                        echo "--> Problem with sidecar! Inspect the logs to diagnose the issue. <--"
-                      fi
-                    else
-                      retry docker compose -f sidecar.compose.yaml pull -q
-                      retry docker compose -f sidecar.compose.yaml up -d
+                    SIDECAR_IMAGE=${container_registry}/cyral-sidecar:$SIDECAR_VERSION
+                    retry docker pull -q $SIDECAR_IMAGE
+                    retry docker run -d --name sidecar --network=host --log-driver=local --log-opt max-size=500m --restart=unless-stopped --env-file .env $SIDECAR_IMAGE
+                    if ! containerCheck "sidecar"; then
+                      echo "--> Problem with sidecar! Inspect the logs to diagnose the issue. <--"
                     fi
                 }
-              - sidecar_tls_certificate_secret_arn: !If [sidecarTLSCertificateSecretArnNotEmpty, !Ref SidecarTLSCertificateSecretArn, '']
-                sidecar_ca_certificate_secret_arn: !If [sidecarCACertificateSecretArnNotEmpty, !Ref SidecarCACertificateSecretArn, '']
-                secrets_location: !If [hasSecretsLocation, !Ref SecretsLocation, !Sub '/cyral/sidecars/${SidecarId}/secrets']
+              - aws_region: !Ref AWS::Region
+                container_registry: !Ref ContainerRegistry
+                secret_arn: !If [shouldCreateSecret, !Ref SMSidecarSecret, !Ref SecretArn]
+                secret_role_arn: !Ref SecretRoleArn
+                sidecar_ca_certificate_secret_arn: !If [caCertificateSecretArnNotEmpty, !Ref CACertificateSecretArn, '']
+                sidecar_tls_certificate_secret_arn: !If [tlsCertificateSecretArnNotEmpty, !Ref TLSCertificateSecretArn, '']
             pre:
               !Sub
               - |
@@ -765,7 +713,7 @@ Resources:
                 recycle_status=\$(echo \$health | jq -r .components.recycle.status)
                 if [ \$recycle_status == "degraded" ]; then
                   echo "Sidecar instance has been marked for recycling - setting EC2 health to 'Unhealthy'"
-                  aws autoscaling set-instance-health --region ${AWS::Region} --instance-id \$INSTANCE_ID --no-should-respect-grace-period --health-status Unhealthy
+                  aws autoscaling set-instance-health --region ${aws_region} --instance-id \$INSTANCE_ID --no-should-respect-grace-period --health-status Unhealthy
                 fi
                 EOF
 
@@ -798,20 +746,10 @@ Resources:
                 echo "Sidecar version: $SIDECAR_VERSION"
 
                 docker_setup
-                if [[ ${UseSingleContainer} == "true" ]]; then
-                  echo "Skipping Docker Compose Install, not required for single container"
-                else
-                  docker_compose_install
-                fi
                 update_nginx_resolver
                 load_certs
                 load_idp_certs
                 registry_login
-                if [[ ${UseSingleContainer} == "true" ]]; then
-                  echo "Skipping Download Sidecar Compose File, not required for single container"
-                else
-                  retry download_sidecar
-                fi
 
                 CYRAL_SIDECAR_ENDPOINT="${sidecar_endpoint}"
                 if [ -z "$CYRAL_SIDECAR_ENDPOINT" ]; then
@@ -821,53 +759,56 @@ Resources:
                         http://169.254.169.254/latest/meta-data/public-ipv4 || (hostname -I 2>/dev/null || echo "manually-set-endpoint") | awk '{print $1}')
                 fi
 
-                # Initializing environment variables
-                env_var=$(cat <<EOF
-                SIDECAR_VERSION=$SIDECAR_VERSION
+                echo "Sidecar endpoint: $CYRAL_SIDECAR_ENDPOINT"
+
+                echo "Initializing environment variables..."
+                cat > /home/ec2-user/.env << EOF
+
                 IS_DYNAMIC_VERSION=$IS_DYNAMIC_VERSION
                 IS_RECYCLABLE=true
-                CONTROLPLANE_HOST=${ControlPlane}
-                CONTAINER_REGISTRY=${ContainerRegistry}
-                METRICS_PORT=9000
-                SIDECAR_ENDPOINT=${sidecar_endpoint}
-                CLOUD_PROVIDER=AWS
-                AWS_REGION=${AWS::Region}
-                AWS_ACCOUNT_ID=${AWS::AccountId}
-                INSTANCE_ID=$INSTANCE_ID
-                LOG_GROUP_NAME=${log_group}
-                NGINX_RESOLVER=$NGINX_RESOLVER
-                SECRETS_LOCATION=${secrets_location}
+
+                AWS_REGION=${aws_region}
+                AWS_ACCOUNT_ID=${aws_account_id}
+                LOG_GROUP_NAME=${log_group_name}
+
                 TLS_SKIP_VERIFY=${tls_skip_verify}
-                SSO_LOGIN_URL=${IdPSSOLoginURL}
-                IDP_CERTIFICATE=${IdPCertificate}
-                SIDECAR_IDP_PUBLIC_CERT=${SidecarPublicIdPCertificate}
-                SIDECAR_IDP_PRIVATE_KEY=${SidecarPrivateIdPKey}
+
+                CYRAL_IDP_CERTIFICATE=${!IDP_CERTIFICATE}
+                CYRAL_NGINX_RESOLVER=$NGINX_RESOLVER
+                CYRAL_SSO_LOGIN_URL=${IdPSSOLoginURL}
+
+                CYRAL_SIDECAR_IDP_PUBLIC_CERT=${SidecarPublicIdPCertificate}
+                CYRAL_SIDECAR_IDP_PRIVATE_KEY=${SidecarPrivateIdPKey}
+
+                CYRAL_SIDECAR_CA_CERT=${!SIDECAR_CA_CERT}
+                CYRAL_SIDECAR_CA_PRIVATE_KEY=${!SIDECAR_CA_KEY}
+                CYRAL_SIDECAR_TLS_CERT=${!SIDECAR_TLS_CERT}
+                CYRAL_SIDECAR_TLS_PRIVATE_KEY=${!SIDECAR_TLS_KEY}
+
+                CYRAL_CONTROL_PLANE=${ControlPlane}
+
+                CYRAL_LOAD_BALANCER_TLS_PORTS=${load_balancer_tls_ports}
+
                 CYRAL_SIDECAR_ID=${SidecarId}
                 CYRAL_SIDECAR_CLIENT_ID=${!SIDECAR_CLIENT_ID}
                 CYRAL_SIDECAR_CLIENT_SECRET=${!SIDECAR_CLIENT_SECRET}
-                CYRAL_CONTROL_PLANE=${ControlPlane}
-                CYRAL_SIDECAR_VERSION=$SIDECAR_VERSION
-                CYRAL_SIDECAR_ENDPOINT=$CYRAL_SIDECAR_ENDPOINT
                 CYRAL_SIDECAR_CLOUD_PROVIDER=aws
+                CYRAL_SIDECAR_DEPLOYMENT_PROPERTIES='{ \"account-id\": \"${aws_account_id}\",\"region\": \"${aws_region}\",\"deployment-type\": \"cloudformation-ec2\"}'
+                CYRAL_SIDECAR_ENDPOINT=$CYRAL_SIDECAR_ENDPOINT
+                CYRAL_SIDECAR_INSTANCE_ID=$INSTANCE_ID
+                CYRAL_SIDECAR_VERSION=$SIDECAR_VERSION
 
-                CYRAL_SIDECAR_DEPLOYMENT_PROPERTIES='{\"account-id\": \"${AWS::AccountId}\",\"region\": \"${AWS::Region}\",\"deployment-type\": \"cloudformation-ec2\"}'
-                CYRAL_CERTIFICATE_MANAGER_TLS_KEY=${!SIDECAR_TLS_KEY}
-                CYRAL_CERTIFICATE_MANAGER_TLS_CERT=${!SIDECAR_TLS_CERT}
-                CYRAL_CERTIFICATE_MANAGER_CA_KEY=${!SIDECAR_CA_KEY}
-                CYRAL_CERTIFICATE_MANAGER_CA_CERT=${!SIDECAR_CA_CERT}
+                CYRAL_REPOSITORIES_SUPPORTED=${repositories_supported}
 
-                LOAD_BALANCER_TLS_PORTS=${load_balancer_tls_ports}
                 EOF
-                )
-                cat > /home/ec2-user/.env << EOF
-                $env_var
-                $proxy_env
-                EOF
-              - sidecar_endpoint: !If [deployLoadBalancer, !If [sidecarDNSNameNotEmpty, !Ref SidecarDNSName, !GetAtt LoadBalancer.DNSName], ""]
-                log_group: !Ref CloudwatchLogGroup
-                tls_skip_verify: 'tls'
-                secrets_location: !If [hasSecretsLocation, !Ref SecretsLocation, !Sub '/cyral/sidecars/${SidecarId}/secrets']
+              - aws_account_id: !Ref AWS::AccountId
+                aws_region: !Ref AWS::Region
                 load_balancer_tls_ports: !If [loadBalancerCertificateArnNotEmpty, 443, '']
+                log_group_name: !Ref CloudwatchLogGroup
+                repositories_supported: !Ref RepositoriesSupported
+                secret_arn: !If [shouldCreateSecret, !Ref SMSidecarSecret, !Ref SecretArn]
+                sidecar_endpoint: !If [deployLoadBalancer, !If [dnsNameNotEmpty, !Ref DNSName, !GetAtt LoadBalancer.DNSName], ""]
+                tls_skip_verify: 'tls'
             post: |
               launch
 
@@ -878,7 +819,7 @@ Resources:
       VpcId: !Ref VpcId
       Tags:
         - Key: "Name"
-          Value: !Join ["-", [!Ref NamePrefix, "sidecar"]]
+          Value: !If [hasNamePrefix, !Join ["-", ["cyral", !Ref NamePrefix]], "cyral"]
         - Key: "Stack"
           Value: !Ref "AWS::StackName"
         - Fn::If:
@@ -951,7 +892,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Condition: deployLoadBalancer
     Properties:
-      Name: !Ref NamePrefix
+      Name: !If [hasNamePrefix, !Join ["-", ["cyral", !Ref NamePrefix]], "cyral"]
       Type: network
       Scheme: !Ref LoadBalancerScheme
       Subnets: !Ref Subnets
@@ -1289,10 +1230,11 @@ Resources:
 
   SMSidecarSecret:
     Type: AWS::SecretsManager::Secret
+    Condition: shouldCreateSecret
     Properties:
       Description: Cyral Sidecar secret with client id, secret and container registry key.
-      Name: !If [hasSecretsLocation, !Ref SecretsLocation, !Sub '/cyral/sidecars/${SidecarId}/secrets']
-      SecretString: !Sub '{"clientId":"${ClientId}", "clientSecret": "${ClientSecret}", "containerRegistryKey": "${ContainerRegistryKey}", "sidecarPublicIdpCertificate": "${SidecarPublicIdPCertificate}", "sidecarPrivateIdpKey": "${SidecarPrivateIdPKey}"}'
+      Name: !Sub '/cyral/sidecars/${SidecarId}/secrets'
+      SecretString: !Sub '{"clientId":"${ClientId}", "clientSecret": "${ClientSecret}", "sidecarPublicIdpCertificate": "${SidecarPublicIdPCertificate}", "sidecarPrivateIdpKey": "${SidecarPrivateIdPKey}", "idpCertificate": "${IdPCertificate}"}'
       KmsKeyId: !Ref AWS::NoValue
       Tags:
         - Key: "Stack"
@@ -1304,18 +1246,18 @@ Resources:
           - !Ref AWS::NoValue
 
 Outputs:
-  SidecarDNS:
+  DNS:
     Description: Sidecar DNS name
     Value: !If [deployLoadBalancer, !GetAtt LoadBalancer.DNSName, "NA"]
 
-  SidecarLoadBalancerDNS:
+  LoadBalancerDNS:
     Description: Sidecar load balancer DNS name
     Value: !If [deployLoadBalancer, !GetAtt LoadBalancer.DNSName, "NA"]
 
-  SidecarSecurityGroupID:
+  SecurityGroupID:
     Description: Sidecar security group id
     Value: !Ref SidecarSecurityGroup
 
   SidecarNameIdentifier:
     Description: Identifier used to create various AWS resources such as EC2 Name and CloudWatch Log Group Name
-    Value: !Ref NamePrefix
+    Value: !If [hasNamePrefix, !Join ["-", ["cyral", !Ref NamePrefix]], "cyral"]

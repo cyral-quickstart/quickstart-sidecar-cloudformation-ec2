@@ -55,8 +55,8 @@ that the following requirements are met by your private key / certificate pair:
 If you have a scenario in which you have two different accounts: one where you
 deploy the sidecar and another where you manage the sidecar secrets, then you
 can use the module inputs
-`SidecarTLSCertificateRoleArn` (for TLS certificate) or
-`SidecarCACertificateRoleArn` (for CA certificate) to the sidecar
+`TLSCertificateRoleArn` (for TLS certificate) or
+`CACertificateRoleArn` (for CA certificate) to the sidecar
 module. Suppose you have the following configuration:
 
    - Account `111111111111` used to manage secrets
@@ -70,8 +70,8 @@ module. Suppose you have the following configuration:
    documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/tutorial_cross-account-with-roles.html)
    for further information.
 
-2. Provide the ARN of `role1` to `SidecarTLSCertificateRoleArn` (for the TLS
-   certificate) or `SidecarCACertificateRoleArn` (for the CA certificate) of
+2. Provide the ARN of `role1` to `TLSCertificateRoleArn` (for the TLS
+   certificate) or `CACertificateRoleArn` (for the CA certificate) of
    the sidecar module.
 
 3. Provide the ARNs of the certificate secrets to the sidecar module, as
@@ -82,10 +82,10 @@ module. Suppose you have the following configuration:
 There are two parameters in the sidecar module you can use to provide the ARN of
 a secret containing a custom certificate:
 
-1. `SidecarTLSCertificateRoleArn` (Optional) ARN of secret in AWS Secrets
+1. `TLSCertificateRoleArn` (Optional) ARN of secret in AWS Secrets
    Manager that contains a certificate to terminate TLS connections.
 
-1. `SidecarCACertificateRoleArn` (Optional) ARN of secret in AWS Secrets
+1. `CACertificateRoleArn` (Optional) ARN of secret in AWS Secrets
    Manager that contains a CA certificate to sign sidecar-generated certs.
 
 The secrets must follow the following JSON format.
@@ -116,7 +116,7 @@ This script expects a few environment variables to be set:
 
 * `AWS_DEFAULT_REGION` : This should be set to the same region where you plan to deploy your sidecar
 * `SIDECAR_ID` : This should be set to the same value you use for the `SidecarId` parameter of this [Cloudformation](../cft_sidecar.yaml) template
-* `SIDECAR_NAME` : (Optional) This should be set to the same value you use for the `SidecarDNSName` parameter of this [Cloudformation](../cft_sidecar.yaml) template. If this is not set, then the default hostname of `sidecar.cyral.app.com` will be used for the domain name on the certificates.
+* `SIDECAR_NAME` : (Optional) This should be set to the same value you use for the `DNSName` parameter of this [Cloudformation](../cft_sidecar.yaml) template. If this is not set, then the default hostname of `sidecar.app.cyral.com` will be used for the domain name on the certificates.
 
 ### Required commands
 
@@ -130,9 +130,9 @@ This script makes use of the following commands:
 
 With the environment variables set, you can run the command to generate the certificates and create the AWS secrets. The ARN for each of the certificates are listed in the results.
 
-The ARN (`arn:aws:secretsmanager:us-east-1:222222222222:secret:/cyral/sidecars/abc123/ca-certificate-CC293L`) for the AWS Secret named `/cyral/sidecars/abc123/ca-certificate` should be used as the value for the `SidecarCACertificateSecretArn` [Cloudformation](../cft_sidecar.yaml) template parameter.
+The ARN (`arn:aws:secretsmanager:us-east-1:222222222222:secret:/cyral/sidecars/abc123/ca-certificate-CC293L`) for the AWS Secret named `/cyral/sidecars/abc123/ca-certificate` should be used as the value for the `CACertificateSecretArn` [Cloudformation](../cft_sidecar.yaml) template parameter.
 
-The ARN (`arn:aws:secretsmanager:us-east-1:222222222222:secret:/cyral/sidecars/abc123/self-signed-certificate-A27IAy`) for the AWS Secret named `/cyral/sidecars/abc123/self-signed-certificate` should be used as the value for the `SidecarCreatedCertificateSecretArn` [Cloudformation](../cft_sidecar.yaml) template parameter.
+The ARN (`arn:aws:secretsmanager:us-east-1:222222222222:secret:/cyral/sidecars/abc123/self-signed-certificate-A27IAy`) for the AWS Secret named `/cyral/sidecars/abc123/self-signed-certificate` should be used as the value for the `TLSCertificateSecretArn` [Cloudformation](../cft_sidecar.yaml) template parameter.
 
 
 ```shell
@@ -190,9 +190,9 @@ This script makes use of the following commands:
 
 With the environment variables set and files created, you can run the command to import the certificates and create the AWS secrets. The ARN for each of the certificates are listed in the results.
 
-The ARN (`arn:aws:secretsmanager:us-east-1:222222222222:secret:/cyral/sidecars/abc123/ca-certificate-CC293L`) for the AWS Secret named `/cyral/sidecars/abc123/ca-certificate` should be used as the value for the `SidecarCACertificateSecretArn` [Cloudformation](../cft_sidecar.yaml) template parameter.
+The ARN (`arn:aws:secretsmanager:us-east-1:222222222222:secret:/cyral/sidecars/abc123/ca-certificate-CC293L`) for the AWS Secret named `/cyral/sidecars/abc123/ca-certificate` should be used as the value for the `CACertificateSecretArn` [Cloudformation](../cft_sidecar.yaml) template parameter.
 
-The ARN (`arn:aws:secretsmanager:us-east-1:222222222222:secret:/cyral/sidecars/abc123/self-signed-certificate-A27IAy`) for the AWS Secret named `/cyral/sidecars/abc123/self-signed-certificate` should be used as the value for the `SidecarCreatedCertificateSecretArn` [Cloudformation](../cft_sidecar.yaml) template parameter.
+The ARN (`arn:aws:secretsmanager:us-east-1:222222222222:secret:/cyral/sidecars/abc123/self-signed-certificate-A27IAy`) for the AWS Secret named `/cyral/sidecars/abc123/self-signed-certificate` should be used as the value for the `TLSCertificateSecretArn` [Cloudformation](../cft_sidecar.yaml) template parameter.
 
 
 ```shell
